@@ -5,9 +5,9 @@ from ilg.xcdl.object import Object
 class Configuration(Object):
     
     
-    def __init__(self, name, display, description, **kwargs):
+    def __init__(self, **kwargs):
         
-        super(Configuration,self).__init__(name, display, description, **kwargs)
+        super(Configuration,self).__init__(**kwargs)
         
         if 'scripts' in self._kwargs:
             self._scriptsList = self._kwargs['scripts']

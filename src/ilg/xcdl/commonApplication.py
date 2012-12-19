@@ -93,7 +93,7 @@ class CommonApplication(object):
             # warn if some of the keywords were not parsed
             if len(node.getNonParsedKeywords()) > 0:
                 print 'Ignored keywords {0} in {1}'.format(
-                        node.getNonParsedKeywords(), node.getName())
+                        node.getNonParsedKeywords(), node.getId())
         
         return
         
@@ -105,9 +105,9 @@ class CommonApplication(object):
             if node.getChildren() == None:
                 continue
                 
-            #print 'has children {0}'.format(node.getName())
+            #print 'has children {0}'.format(node.getId())
             for child in node.getChildren():
-                #print 'child {0}'.format(child.getName())
+                #print 'child {0}'.format(child.getId())
                 
                 # link-up to parent
                 child.setTreeParent(node)
@@ -142,7 +142,7 @@ class CommonApplication(object):
                 
                 found = False
                 for parentNode in oldList:                    
-                    if parentName == parentNode.getName():
+                    if parentName == parentNode.getId():
                         found = True
                         break
                     
@@ -167,20 +167,20 @@ class CommonApplication(object):
     def processNode(self, node, parent, scriptAbsolutePath):
           
         # check if the name was already used
-        if node.getName() in self.allObjectsDict:
+        if node.getId() in self.allObjectsDict:
                 
-            oldObject = self.allObjectsDict[node.getName()]
+            oldObject = self.allObjectsDict[node.getId()]
             oldKind = oldObject.getKind()
-            oldDisplay = oldObject.getDisplay();
+            oldDisplay = oldObject.getName();
             raise ErrorWithDescription('Name {0} \'{1}\' redefined (was {2} \'{3}\''.
-                            format(node.getName(), node.getDisplay(), oldKind, oldDisplay))
+                            format(node.getId(), node.getName(), oldKind, oldDisplay))
               
         # eventually process local parent
         parentName = node.getParentName()
         if parentName != None and parent != None:
-            if parent.getName() != parentName:
+            if parent.getId() != parentName:
                 print 'Parent of {0} already is {1}, redefined as {2}, ignored'.format(
-                                node.getName(), parent.getName(), parentName)
+                                node.getId(), parent.getId(), parentName)
             parentName = None
             
         if parentName != None:
@@ -205,7 +205,7 @@ class CommonApplication(object):
                 crtParent.addTreeChild(node)
 
         # store current object in the global dictionary    
-        self.allObjectsDict[node.getName()] = node
+        self.allObjectsDict[node.getId()] = node
         
         # process inner scripts        
         scriptsList = node.getScripts()
@@ -239,6 +239,7 @@ class CommonApplication(object):
     def dumpTree(self, packagesTreesList):
         
         print "The packages trees:"
+        print
         for tree in packagesTreesList:
             self.recurseDumpTree(tree, 0)
         return
@@ -246,7 +247,7 @@ class CommonApplication(object):
         
     def recurseDumpTree(self, node, depth):
         
-        indent = '  '
+        indent = '   '
         
         kind = None
         if node.getKind() != None:
@@ -255,20 +256,20 @@ class CommonApplication(object):
                 kind += ',{0}'.format(node.getPlatform())
             kind += ')'
             
-        print '{0}{1} \'{2}\'{3}'.format(indent*depth, node.getName(), 
-                            node.getDisplay(), kind)
+        print '{0}*{1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+                            node.getName(), kind)
 
         # dump sources, if any
         sourcesList = node.getCompile()
         if sourcesList != None and len(sourcesList) > 0:
             for source in sourcesList:
-                print '{0}compile {1}'.format(indent*(depth+1), source)
+                print '{0}-compile {1}'.format(indent*(depth+1), source)
 
         # dump sources, if any
         requiresList = node.getRequires()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}requires {1}'.format(indent*(depth+1), requires)
+                print '{0}-requires {1}'.format(indent*(depth+1), requires)
                 
         children = node.getTreeChildren()
         if children == None:
@@ -284,6 +285,7 @@ class CommonApplication(object):
     def dumpConfiguration(self, configTreesList):
         
         print "The configuration trees:"
+        print
         for tree in configTreesList:
             self.recurseDumpConfiguration(tree, 0)
         return
@@ -291,29 +293,29 @@ class CommonApplication(object):
         
     def recurseDumpConfiguration(self, node, depth):
         
-        indent = '  '
+        indent = '   '
         
         kind = None
         if node.getKind() != None:
             kind = ' ({0})'.format(node.getKind())
             
-        print '{0}{1} \'{2}\'{3}'.format(indent*depth, node.getName(), 
-                            node.getDisplay(), kind)
+        print '{0}*{1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+                            node.getName(), kind)
 
         # dump sources, if any
         requiresList = node.getRequires()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}requires {1}'.format(indent*(depth+1), requires)
+                print '{0}-requires {1}'.format(indent*(depth+1), requires)
         
         optionsList = node.getOptions()
         if optionsList != None and len(optionsList) > 0:
             for key in optionsList.keys():
-                print'{0}option {1}={2}'.format(indent*(depth+1), key, optionsList[key])
+                print'{0}-option {1}={2}'.format(indent*(depth+1), key, optionsList[key])
                      
         buildFolder = node.getBuildFolder()
         if buildFolder != None:
-            print'{0}buildFolder=\'{1}\''.format(indent*(depth+1), buildFolder)
+            print'{0}-buildFolder=\'{1}\''.format(indent*(depth+1), buildFolder)
             
         children = node.getTreeChildren()
         if children == None:

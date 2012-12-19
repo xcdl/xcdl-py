@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from ilg.xcdl.errorWithDescription import ErrorWithDescription
+
+
 class Object(object):
     
     # static member
@@ -19,7 +22,7 @@ class Object(object):
         return Object._objectsList
     
     
-    def __init__(self, name, display, description, **kwargs):
+    def __init__(self, **kwargs):
         
         # store the current keywords args dictionary. 
         # will be consumed on each constructor
@@ -29,9 +32,22 @@ class Object(object):
             Object._objectsList.append(self)
         
         # store given values
-        self._name = name
-        self._display = display        
-        self._description = description
+        self._id = None
+        if 'id' in self._kwargs:
+            self._id = self._kwargs['id']
+            del self._kwargs['id']
+        else:
+            raise ErrorWithDescription('Mandatory id missing')
+            
+        self._name = None        
+        if 'name' in self._kwargs:
+            self._name = self._kwargs['name']
+            del self._kwargs['name']
+
+        self._description = None
+        if 'description' in self._kwargs:
+            self._description = self._kwargs['description']
+            del self._kwargs['description']
                 
         # initialise empty members
         self._treeParent = None
@@ -39,39 +55,39 @@ class Object(object):
         self._scriptsList = None        
         self._basePath = None        
         self._parentName = None
-        self._sourcesPathsList = None
-        self._compileList = None
-        self._requiresList = None
         self._platform = None
-        self._headerPath = None
-        self._headerDefinition = None
-        self._childrenList = None
         
         # consume known args
         #if 'parent' in self._kwargs:
         #    self._parentName = self._kwargs['parent']
         #    del self._kwargs['parent']
         
+        self._sourcesPathsList = None
         if 'sourcesPaths' in self._kwargs:
             self._sourcesPathsList = self._kwargs['sourcesPaths']
             del self._kwargs['sourcesPaths']
 
+        self._compileList = None
         if 'compile' in self._kwargs:
             self._compileList = self._kwargs['compile']
             del self._kwargs['compile']
 
+        self._requiresList = None
         if 'requires' in self._kwargs:
             self._requiresList = self._kwargs['requires']
             del self._kwargs['requires']
 
+        self._headerPath = None
         if 'headerPath' in self._kwargs:
             self._headerPath = self._kwargs['headerPath']
             del self._kwargs['headerPath']
 
+        self._headerDefinition = None
         if 'headerDefinition' in self._kwargs:
             self._headerDefinition = self._kwargs['headerDefinition']
             del self._kwargs['headerDefinition']
 
+        self._childrenList = None
         if 'children' in self._kwargs:
             self._childrenList = self._kwargs['children']
             del self._kwargs['children']
@@ -84,14 +100,14 @@ class Object(object):
         return None
     
     
+    def getId(self):
+        
+        return self._id
+    
+    
     def getName(self):
         
         return self._name
-    
-    
-    def getDisplay(self):
-        
-        return self._display
     
     
     def getDescription(self):
