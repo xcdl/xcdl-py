@@ -94,13 +94,15 @@ class Application(CommonApplication):
 
     def validate(self):
         
-        if self.treeFilePath == None:
-            raise ErrorWithDescription('Missing --tree file path')
-
+        if len(self.packagesFilePathList) == 0:
+            raise ErrorWithDescription('Missing --packages files')
+        
         return
     
 
     def process(self):
+        
+        self.validate()
         
         print
         print "Dump the configuration tree."
@@ -109,14 +111,16 @@ class Application(CommonApplication):
         print 'Process root package files {0}'.format(self.packagesFilePathList)
         packagesTreesList = self.loadPackagesTrees(self.packagesFilePathList)
 
-        print 'Process config file "{0}"'.format(self.configFilePath)
-        configTreesList = self.loadConfig(self.configFilePath)
+        if self.configFilePath != None:
+            print 'Process config file \'{0}\''.format(self.configFilePath)
+            configTreesList = self.loadConfig(self.configFilePath)
 
         print
         self.dumpTree(packagesTreesList)
         
-        print
-        self.dumpConfiguration(configTreesList)
+        if self.configFilePath != None:
+            print
+            self.dumpConfiguration(configTreesList)
 
         return
 

@@ -19,6 +19,11 @@ class Configuration(Object):
             self._optionsList = self._kwargs['options']
             del self._kwargs['options']
         
+        self._buildFolder = None
+
+        if 'buildFolder' in self._kwargs:
+            self._buildFolder = self._kwargs['buildFolder']
+            del self._kwargs['buildFolder']
 
         return
     
@@ -36,5 +41,10 @@ class Configuration(Object):
     def getOptions(self):
         
         return self._optionsList
+    
+    
+    def getBuildFolder(self):
+        
+        return self._buildFolder
     
     
