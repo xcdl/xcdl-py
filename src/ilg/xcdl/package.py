@@ -12,7 +12,7 @@ class Package(Component):
         return
     
 
-    def getKind(self):
+    def getObjectType(self):
         
         return "package"
 

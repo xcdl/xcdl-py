@@ -170,7 +170,7 @@ class CommonApplication(object):
         if node.getId() in self.allObjectsDict:
                 
             oldObject = self.allObjectsDict[node.getId()]
-            oldKind = oldObject.getKind()
+            oldKind = oldObject.getObjectType()
             oldDisplay = oldObject.getName();
             raise ErrorWithDescription('Name {0} \'{1}\' redefined (was {2} \'{3}\''.
                             format(node.getId(), node.getName(), oldKind, oldDisplay))
@@ -250,26 +250,26 @@ class CommonApplication(object):
         indent = '   '
         
         kind = None
-        if node.getKind() != None:
-            kind = ' ({0}'.format(node.getKind())
-            if node.getPlatform() != None:
-                kind += ',{0}'.format(node.getPlatform())
+        if node.getObjectType() != None:
+            kind = ' ({0}'.format(node.getObjectType())
+            if node.getKind() != None:
+                kind += ',{0}'.format(node.getKind())
             kind += ')'
             
-        print '{0}*{1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+        print '{0}* {1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
                             node.getName(), kind)
 
         # dump sources, if any
         sourcesList = node.getCompile()
         if sourcesList != None and len(sourcesList) > 0:
             for source in sourcesList:
-                print '{0}-compile {1}'.format(indent*(depth+1), source)
+                print '{0}- compile {1}'.format(indent*(depth+1), source)
 
         # dump sources, if any
         requiresList = node.getRequires()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}-requires {1}'.format(indent*(depth+1), requires)
+                print '{0}- requires {1}'.format(indent*(depth+1), requires)
                 
         children = node.getTreeChildren()
         if children == None:
@@ -296,27 +296,34 @@ class CommonApplication(object):
         indent = '   '
         
         kind = None
-        if node.getKind() != None:
-            kind = ' ({0})'.format(node.getKind())
+        if node.getObjectType() != None:
+            kind = ' ({0})'.format(node.getObjectType())
             
-        print '{0}*{1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+        print '{0}* {1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
                             node.getName(), kind)
 
         # dump sources, if any
         requiresList = node.getRequires()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}-requires {1}'.format(indent*(depth+1), requires)
+                print '{0}- requires {1}'.format(indent*(depth+1), requires)
         
         optionsList = node.getOptions()
         if optionsList != None and len(optionsList) > 0:
             for key in optionsList.keys():
-                print'{0}-option {1}={2}'.format(indent*(depth+1), key, optionsList[key])
+                print'{0}- option {1}={2}'.format(indent*(depth+1), key, 
+                                                  optionsList[key])
                      
         buildFolder = node.getBuildFolder()
         if buildFolder != None:
-            print'{0}-buildFolder=\'{1}\''.format(indent*(depth+1), buildFolder)
-            
+            print'{0}- buildFolder=\'{1}\''.format(indent*(depth+1), buildFolder)
+
+        preprocessorSymbols = node.getPreprocessorSymbols()
+        if preprocessorSymbols != None:
+            for preprocessorSymbol in preprocessorSymbols:
+                print '{0}- preprocessorSymbol=\'{1}\''.format(indent*(depth+1), 
+                                                            preprocessorSymbol)
+                    
         children = node.getTreeChildren()
         if children == None:
             return

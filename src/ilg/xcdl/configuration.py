@@ -9,28 +9,35 @@ class Configuration(Object):
         
         super(Configuration,self).__init__(**kwargs)
         
-        if 'scripts' in self._kwargs:
-            self._scriptsList = self._kwargs['scripts']
-            del self._kwargs['scripts']
+        key = 'scripts'
+        if key in self._kwargs:
+            self._scriptsList = self._kwargs[key]
+            del self._kwargs[key]
 
+        key = 'options'
         self._optionsList = None
+        if key in self._kwargs:
+            self._optionsList = self._kwargs[key]
+            del self._kwargs[key]
         
-        if 'options' in self._kwargs:
-            self._optionsList = self._kwargs['options']
-            del self._kwargs['options']
-        
+        key = 'buildFolder'
         self._buildFolder = None
+        if key in self._kwargs:
+            self._buildFolder = self._kwargs[key]
+            del self._kwargs[key]
 
-        if 'buildFolder' in self._kwargs:
-            self._buildFolder = self._kwargs['buildFolder']
-            del self._kwargs['buildFolder']
-
+        key = 'preprocessorSymbols'
+        self._preprocessorSymbolsList = None
+        if key in self._kwargs:
+            self._preprocessorSymbolsList = self._kwargs[key]
+            del self._kwargs[key]
+        
         return
     
 
-    def getKind(self):
+    def getObjectType(self):
         
-        return "configuration"
+        return 'configuration'
 
 
     def getScripts(self):
@@ -46,5 +53,11 @@ class Configuration(Object):
     def getBuildFolder(self):
         
         return self._buildFolder
+    
+    
+    def getPreprocessorSymbols(self):
+        
+        return self._preprocessorSymbolsList
+    
     
     

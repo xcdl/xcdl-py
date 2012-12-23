@@ -3,7 +3,7 @@
 	<name>xcdl-python</name>
 	<comment></comment>
 	<projects>
-		<project>packages</project>
+		<project>micro-os-plus-se.git</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

@@ -17,14 +17,10 @@ class Component(Object):
             self._basePath = self._kwargs['basePath']
             del self._kwargs['basePath']
 
-        if 'platform' in self._kwargs:
-            self._platform = self._kwargs['platform']
-            del self._kwargs['platform']
-
         return
     
 
-    def getKind(self):
+    def getObjectType(self):
         
         return "component"
 

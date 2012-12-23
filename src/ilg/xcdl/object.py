@@ -55,7 +55,6 @@ class Object(object):
         self._scriptsList = None        
         self._basePath = None        
         self._parentName = None
-        self._platform = None
         
         # consume known args
         #if 'parent' in self._kwargs:
@@ -92,10 +91,15 @@ class Object(object):
             self._childrenList = self._kwargs['children']
             del self._kwargs['children']
 
+        self._kind = None
+        if 'kind' in self._kwargs:
+            self._kind = self._kwargs['kind']
+            del self._kwargs['kind']
+
         return
 
 
-    def getKind(self):
+    def getObjectType(self):
         
         return None
     
@@ -191,12 +195,7 @@ class Object(object):
         
         return self._requiresList
     
-    
-    def getPlatform(self):
         
-        return self._platform
-    
-    
     def getHeaderPath(self):
         
         return self._headerPath
@@ -210,4 +209,16 @@ class Object(object):
     def getChildren(self):
         
         return self._childrenList
+    
+    
+    def getKind(self):
+        
+        return self._kind
+    
+    
+    def setKind(self, kind):
+        
+        self._kind = kind
+        
+        
     
