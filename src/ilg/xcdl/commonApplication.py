@@ -5,11 +5,13 @@ import os
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 from ilg.xcdl.object import Object
 
+from ilg.xcdl.packageLocation import PackageLocation
+
 # WARNING: DO NOT REMOVE!
 # the following are needed in executed scripts
-from ilg.xcdl.component import Component #@UnusedImport
-from ilg.xcdl.package import Package #@UnusedImport
-from ilg.xcdl.configuration import Configuration #@UnusedImport
+from ilg.xcdl.component import Component  # @UnusedImport
+from ilg.xcdl.package import Package  # @UnusedImport
+from ilg.xcdl.configuration import Configuration  # @UnusedImport
 
 
 class CommonApplication(object):
@@ -23,6 +25,8 @@ class CommonApplication(object):
         # initialise the dictionary where all objects will be stored
         self.allObjectsDict = {}
 
+        self.defaultScripts = ['meta/xcdl.py']
+        
         return
     
     
@@ -34,33 +38,68 @@ class CommonApplication(object):
         for filePath in packagesFilePathList:
             
             packsList = self.loadPackageTree(filePath)
-            packagesTreesList.extend(packsList)
+            if packsList != None:
+                packagesTreesList.extend(packsList)
         
         return packagesTreesList
     
 
-    def loadPackageTree(self, filePath):
-                
-        absoluteFilePath = os.path.abspath(filePath)
-        
-        # process the given script and recurse
-        rootList = self.processScript(None, absoluteFilePath)
+    def loadPackageTree(self, packagePath):
+                        
+        packageAbsolutePath = os.path.abspath(packagePath)
+
+        if os.path.isdir(packageAbsolutePath):
+            print 'Process package folder {0}'.format(packagePath)
+            rootList = self.recurseProcessFolder(None, packageAbsolutePath)
+        elif os.path.isfile(packagePath):
+            print 'Process package file {0}'.format(packagePath)
+            # process the given script and recurse
+            rootList = self.processScript(None, packageAbsolutePath)
+        else:
+            raise ErrorWithDescription("Path not a folder or a file")
+            
         return rootList
 
 
     def loadConfig(self, configFilePath):
                 
-        absoluteConfigFilePath = os.path.abspath(self.configFilePath)
+        print 'Process configuration file \'{0}\''.format(configFilePath)
+        configFileAbsolutePath = os.path.abspath(self.configFilePath)
         
         # process the given script and recurse
-        rootList = self.processScript(None, absoluteConfigFilePath)
+        rootList = self.processScript(None, configFileAbsolutePath, None)
         return rootList
     
     
-    def processScript(self, parent, scriptAbsolutePath):
+    def recurseProcessFolder(self, parent, folderAbsolutePath):
         
-        #print 'processing {0}'.format(scriptAbsolutePath)
-        #print 'from folder {0}'.format(folderAbsolutePath)
+        crtParent = parent
+        localList = []
+        for path in self.defaultScripts:
+            tentativeFileAbsolutePath = os.path.join(folderAbsolutePath, path)
+            if os.path.isfile(tentativeFileAbsolutePath):
+                if self.isVerbose:
+                    print 'is package'
+                
+                packageLocation = PackageLocation(folderAbsolutePath, tentativeFileAbsolutePath)
+                localList = self.processScript(parent, tentativeFileAbsolutePath, packageLocation)
+                crtParent = localList[0]
+                break
+                 
+        for name in os.listdir(folderAbsolutePath):
+            absolutePath = os.path.join(folderAbsolutePath, name)
+            if os.path.isdir(absolutePath):
+                if self.isVerbose:
+                    print 'subfolder {0}'.format(absolutePath)
+                self.recurseProcessFolder(crtParent, absolutePath)
+        
+        return localList
+    
+    
+    def processScript(self, parent, scriptAbsolutePath, packageLocation):
+        
+        if self.isVerbose:
+            print 'process script {0}'.format(scriptAbsolutePath)
         
         # list used to collect all objects contributed by encountered 
         # constructors
@@ -74,12 +113,14 @@ class CommonApplication(object):
         execfile(scriptAbsolutePath)
         
         self.warnNonParsedKeywords(localList)
+        
+        # manual links to children or to parent
         localList = self.linkChildrenNodes(localList)
         localList = self.linkNodesWithParent(localList)
         
         # process parsed nodes
         for obj in localList:            
-            self.processNode(obj, parent, scriptAbsolutePath)
+            self.processNode(obj, parent, scriptAbsolutePath, packageLocation)
             
         # return the current list, useful for the root node,
         # all other use the parent to build the tree                    
@@ -102,12 +143,12 @@ class CommonApplication(object):
                 
         for node in localList:
             
-            if node.getChildren() == None:
+            if node.getChildrenList() == None:
                 continue
                 
-            #print 'has children {0}'.format(node.getId())
-            for child in node.getChildren():
-                #print 'child {0}'.format(child.getId())
+            # print 'has children {0}'.format(node.getId())
+            for child in node.getChildrenList():
+                # print 'child {0}'.format(child.getId())
                 
                 # link-up to parent
                 child.setTreeParent(node)
@@ -164,16 +205,21 @@ class CommonApplication(object):
         return newList
     
     
-    def processNode(self, node, parent, scriptAbsolutePath):
+    def processNode(self, node, parent, scriptAbsolutePath, packageLocation):
           
         # check if the name was already used
         if node.getId() in self.allObjectsDict:
                 
             oldObject = self.allObjectsDict[node.getId()]
             oldKind = oldObject.getObjectType()
-            oldDisplay = oldObject.getName();
+            oldName = oldObject.getName()
+            oldDescription = oldObject.getDescription()
+            
+            if (oldName == node.getName()) and (oldDescription == node.getDescription()):
+                return
+            
             raise ErrorWithDescription('Name {0} \'{1}\' redefined (was {2} \'{3}\''.
-                            format(node.getId(), node.getName(), oldKind, oldDisplay))
+                            format(node.getId(), node.getName(), oldKind, oldName))
               
         # eventually process local parent
         parentName = node.getParentName()
@@ -204,6 +250,10 @@ class CommonApplication(object):
             if crtParent != None:
                 crtParent.addTreeChild(node)
 
+        # remember the current package location
+        if node.getPackageLocation() == None:
+            node.setPackageLocation(packageLocation)
+            
         # store current object in the global dictionary    
         self.allObjectsDict[node.getId()] = node
         
@@ -212,7 +262,7 @@ class CommonApplication(object):
         if scriptsList != None:
                 
             baseRelativePath = node.getBasePath()
-            (scriptAbsoluteFolder,_) = os.path.split(scriptAbsolutePath)
+            (scriptAbsoluteFolder, _) = os.path.split(scriptAbsolutePath)
             baseAbsolutePath = os.path.abspath(os.path.join(
                                         scriptAbsoluteFolder, baseRelativePath))
                                 
@@ -223,15 +273,15 @@ class CommonApplication(object):
                                                 baseAbsolutePath, child))
                 # print childAbsolutePath
                     
-                self.processScript(node, childAbsolutePath)
+                self.processScript(node, childAbsolutePath, packageLocation)
                 
         
         # process children nodes recursively
-        childrenList = node.getChildren()
+        childrenList = node.getChildrenList()
         if childrenList != None:
             
             for child in childrenList:
-                self.processNode(child, node, scriptAbsolutePath)
+                self.processNode(child, node, scriptAbsolutePath, packageLocation)
                 
         return
     
@@ -256,28 +306,33 @@ class CommonApplication(object):
                 kind += ',{0}'.format(node.getKind())
             kind += ')'
             
-        print '{0}* {1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+        print '{0}* {1} \'{2}\'{3}'.format(indent * depth, node.getId(),
                             node.getName(), kind)
 
+        packageLocation = node.getPackageLocation()
+        if packageLocation != None:
+            print '{0}- packageFolder {1}'.format(indent * (depth + 1),
+                                    packageLocation.getFolderAbsolutePath())
+            
         # dump sources, if any
-        sourcesList = node.getCompile()
-        if sourcesList != None and len(sourcesList) > 0:
+        sourcesList = node.getCompileList()
+        if sourcesList != None:
             for source in sourcesList:
-                print '{0}- compile {1}'.format(indent*(depth+1), source)
+                print '{0}- compile {1}'.format(indent * (depth + 1), source)
 
         # dump sources, if any
-        requiresList = node.getRequires()
-        if requiresList != None and len(requiresList) > 0:
-            for requires in requiresList:
-                print '{0}- requires {1}'.format(indent*(depth+1), requires)
+        enableList = node.getEnableList()
+        if enableList != None:
+            for enable in enableList:
+                print '{0}- enable {1}'.format(indent * (depth + 1), enable)
                 
-        children = node.getTreeChildren()
+        children = node.getTreeChildrenList()
         if children == None:
             return
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpTree(child, depth+1)            
+            self.recurseDumpTree(child, depth + 1)            
             
         return
 
@@ -299,40 +354,99 @@ class CommonApplication(object):
         if node.getObjectType() != None:
             kind = ' ({0})'.format(node.getObjectType())
             
-        print '{0}* {1} \'{2}\'{3}'.format(indent*depth, node.getId(), 
+        print '{0}* {1} \'{2}\'{3}'.format(indent * depth, node.getId(),
                             node.getName(), kind)
 
         # dump sources, if any
-        requiresList = node.getRequires()
+        requiresList = node.getEnableList()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}- requires {1}'.format(indent*(depth+1), requires)
+                print '{0}- requires {1}'.format(indent * (depth + 1), requires)
         
         optionsList = node.getOptions()
         if optionsList != None and len(optionsList) > 0:
             for key in optionsList.keys():
-                print'{0}- option {1}={2}'.format(indent*(depth+1), key, 
+                print'{0}- option {1}={2}'.format(indent * (depth + 1), key,
                                                   optionsList[key])
                      
         buildFolder = node.getBuildFolder()
         if buildFolder != None:
-            print'{0}- buildFolder=\'{1}\''.format(indent*(depth+1), buildFolder)
+            print'{0}- buildFolder=\'{1}\''.format(indent * (depth + 1), buildFolder)
 
         preprocessorSymbols = node.getPreprocessorSymbols()
         if preprocessorSymbols != None:
             for preprocessorSymbol in preprocessorSymbols:
-                print '{0}- preprocessorSymbol=\'{1}\''.format(indent*(depth+1), 
+                print '{0}- preprocessorSymbol=\'{1}\''.format(indent * (depth + 1),
                                                             preprocessorSymbol)
                     
-        children = node.getTreeChildren()
+        children = node.getTreeChildrenList()
         if children == None:
             return
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpConfiguration(child, depth+1)
+            self.recurseDumpConfiguration(child, depth + 1)
                         
         return
 
     
+    def enableConfiguration(self, configTreesList, sid):
+        
+        print 'Enable configuration {0}'.format(sid)
+        print
+        
+        if sid not in self.allObjectsDict:
+            print 'Missing id, cancelled'
+            return
+        
+        configNode = self.allObjectsDict[sid]
+        
+        self.enableConfigNode(configNode)
+        return
+    
+    
+    def enableConfigNode(self, configNode):
+        
+        if configNode.getObjectType() != 'configuration':
+            raise ErrorWithDescription('Not a configuration node {0}'.format(configNode.getName()))
+        
+        if self.isVerbose:
+            print 'enable {0}'.format(configNode.getId())
+
+        enableList = configNode.getEnableList()
+        if enableList != None:
+            for enable in enableList:
+                self.enableTreeNode(enable)
+        
+        treeParent = configNode.getTreeParent()
+        if treeParent != None:
+            self.enableConfigNode(treeParent)
+               
+        return
+    
+                
+    def enableTreeNode(self, treeNodeId):
+
+        if treeNodeId not in self.allObjectsDict:
+            raise ErrorWithDescription('Missing enebled node {0}'.format(treeNodeId))
+        
+        treeNode = self.allObjectsDict[treeNodeId]
+        if treeNode.getObjectType() not in [ 'component', 'option' ]:
+            raise ErrorWithDescription('Not a package node {0}'.format(treeNode.getName()))
+        
+        if self.isVerbose:
+            print 'enable {0}'.format(treeNodeId)
+            
+        treeNode.setIsEnabled()
+        
+        enableList = treeNode.getEnableList()
+        if enableList != None:
+            for enable in enableList:
+                self.enableTreeNode(enable)
+                
+        return
+    
+    
+        
+
     

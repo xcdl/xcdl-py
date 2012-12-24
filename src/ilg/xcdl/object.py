@@ -55,7 +55,9 @@ class Object(object):
         self._scriptsList = None        
         self._basePath = None        
         self._parentName = None
-        
+        self._packageLocation = None
+        self._isEnabled = False
+
         # consume known args
         #if 'parent' in self._kwargs:
         #    self._parentName = self._kwargs['parent']
@@ -71,10 +73,11 @@ class Object(object):
             self._compileList = self._kwargs['compile']
             del self._kwargs['compile']
 
-        self._requiresList = None
-        if 'requires' in self._kwargs:
-            self._requiresList = self._kwargs['requires']
-            del self._kwargs['requires']
+        self._enableList = None
+        key = 'enable'
+        if key in self._kwargs:
+            self._enableList = self._kwargs[key]
+            del self._kwargs[key]
 
         self._headerPath = None
         if 'headerPath' in self._kwargs:
@@ -156,7 +159,7 @@ class Object(object):
         return
     
     
-    def getTreeChildren(self):
+    def getTreeChildrenList(self):
         
         return self._treeChildrenList
 
@@ -172,7 +175,7 @@ class Object(object):
     
     
     # climb the hierarchy until found
-    def getSourcePaths(self):
+    def getSourcePathsList(self):
         
         # if explicitly set, return it
         if self._sourcesPathsList != None:
@@ -183,17 +186,17 @@ class Object(object):
             return None
         
         # return the parent base path
-        return self._treeParent.getSourcePaths()
+        return self._treeParent.getSourcePathsList()
 
 
-    def getCompile(self):
+    def getCompileList(self):
         
         return self._compileList
     
     
-    def getRequires(self):
+    def getEnableList(self):
         
-        return self._requiresList
+        return self._enableList
     
         
     def getHeaderPath(self):
@@ -206,7 +209,7 @@ class Object(object):
         return self._headerDefinition
     
     
-    def getChildren(self):
+    def getChildrenList(self):
         
         return self._childrenList
     
@@ -219,6 +222,36 @@ class Object(object):
     def setKind(self, kind):
         
         self._kind = kind
+        return
         
+    def getPackageLocation(self):
         
+        return self._packageLocation
     
+    
+    def setPackageLocation(self, packageLocation):
+        
+        self._packageLocation = packageLocation
+        return
+    
+    
+    def isEnabled(self):
+        
+        return self._isEnabled
+    
+    
+    def setIsEnabled(self):
+        
+        if self._isEnabled:
+            return
+        
+        self._isEnabled=True
+        
+        if self._treeParent == None:
+            return
+        
+        # if the parent exists, enable it too
+        self._treeParent.setIsEnabled()
+        return
+        
+        

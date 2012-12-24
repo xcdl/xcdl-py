@@ -11,6 +11,9 @@ Options:
 
     -p, --packages
         the root of the packages tree file, multiple trees accepted
+    
+    -i, --id
+        the ID of the configuration to be generated
         
     -v, --verbose
         print progress output
@@ -41,6 +44,8 @@ class Application(CommonApplication):
         
         self.configFilePath = None
         
+        self.desiredConfigurationId = None
+        
         return
     
 
@@ -49,11 +54,12 @@ class Application(CommonApplication):
         print __doc__
         return
 
+
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'c:p:hv', 
-                            ['config=', 'packages=', 'help', 'verbose'])
+            (opts, args) = getopt.getopt(self.argv[1:], 'c:p:i:hv', 
+                            ['config=', 'packages=', 'id=', 'help', 'verbose'])
         except getopt.GetoptError as err:
             # print help information and exit:
             print str(err) # will print something like "option -a not recognised"
@@ -72,6 +78,8 @@ class Application(CommonApplication):
                     self.configFilePath = a
                 elif o in ('-p', '--packages'):
                     self.packagesFilePathList.append(a)
+                elif o in ('-i', '--id'):
+                    self.desiredConfigurationId = a
                 elif o in ('-v', '--verbose'):
                     self.isVerbose = True
                 elif o in ('-h', '--help'):
@@ -108,11 +116,9 @@ class Application(CommonApplication):
         print "Dump the configuration tree."
         print
         
-        print 'Process root package files {0}'.format(self.packagesFilePathList)
         packagesTreesList = self.loadPackagesTrees(self.packagesFilePathList)
 
         if self.configFilePath != None:
-            print 'Process config file \'{0}\''.format(self.configFilePath)
             configTreesList = self.loadConfig(self.configFilePath)
 
         print
@@ -122,7 +128,12 @@ class Application(CommonApplication):
             print
             self.dumpConfiguration(configTreesList)
 
+        if self.desiredConfigurationId != None:
+            print
+            self.enableConfiguration(configTreesList, self.desiredConfigurationId)
+            
         return
+
 
 
     
