@@ -122,7 +122,7 @@ class Application(CommonApplication):
             configTreesList = self.loadConfig(self.configFilePath)
 
         print
-        self.dumpTree(packagesTreesList)
+        self.dumpTree(packagesTreesList, False)
         
         if self.configFilePath != None:
             print
@@ -130,8 +130,11 @@ class Application(CommonApplication):
 
         if self.desiredConfigurationId != None:
             print
-            self.enableConfiguration(configTreesList, self.desiredConfigurationId)
-            
+            self.loadConfiguration(configTreesList, self.desiredConfigurationId)
+
+            print
+            self.dumpTree(packagesTreesList, True)
+                   
         return
 
 

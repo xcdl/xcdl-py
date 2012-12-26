@@ -56,7 +56,7 @@ class Object(object):
         self._basePath = None        
         self._parentName = None
         self._packageLocation = None
-        self._isEnabled = False
+        self._isPresent = False
 
         # consume known args
         #if 'parent' in self._kwargs:
@@ -235,23 +235,41 @@ class Object(object):
         return
     
     
-    def isEnabled(self):
+    def isPresent(self):
         
-        return self._isEnabled
+        return self._isPresent
     
     
-    def setIsEnabled(self):
+    def setIsPresent(self):
         
-        if self._isEnabled:
-            return
+        updated = 0
+        if self._isPresent:
+            return updated
         
-        self._isEnabled=True
+        self._isPresent=True        
+        updated = 1
         
         if self._treeParent == None:
-            return
+            return updated
         
         # if the parent exists, enable it too
-        self._treeParent.setIsEnabled()
-        return
+        updated += self._treeParent.setIsPresent()
+        return updated
         
+    
+    def getScriptsList(self):
         
+        return None
+    
+    
+    def getPackageTreeNode(self):
+        
+        if self.getObjectType() == 'package':
+            return self
+        
+        if self._treeParent == None:
+            return None
+        
+        return self.getPackageTreeNode(self._treeParent)
+    
+    

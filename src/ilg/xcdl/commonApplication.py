@@ -12,6 +12,7 @@ from ilg.xcdl.packageLocation import PackageLocation
 from ilg.xcdl.component import Component  # @UnusedImport
 from ilg.xcdl.package import Package  # @UnusedImport
 from ilg.xcdl.configuration import Configuration  # @UnusedImport
+from ilg.xcdl.interface import Interface  # @UnusedImport
 
 
 class CommonApplication(object):
@@ -27,6 +28,8 @@ class CommonApplication(object):
 
         self.defaultScripts = ['meta/xcdl.py']
         
+        self.indent = '   '
+
         return
     
     
@@ -258,7 +261,7 @@ class CommonApplication(object):
         self.allObjectsDict[node.getId()] = node
         
         # process inner scripts        
-        scriptsList = node.getScripts()
+        scriptsList = node.getScriptsList()
         if scriptsList != None:
                 
             baseRelativePath = node.getBasePath()
@@ -286,16 +289,23 @@ class CommonApplication(object):
         return
     
     
-    def dumpTree(self, packagesTreesList):
+    def dumpTree(self, packagesTreesList, isPresent):
         
-        print "The packages trees:"
+        if not isPresent:
+            print "The packages trees:"
+        else:
+            print "The loaded packages trees:"
+        
         print
         for tree in packagesTreesList:
-            self.recurseDumpTree(tree, 0)
+            self.recurseDumpTree(tree, 0, isPresent)
         return
     
         
-    def recurseDumpTree(self, node, depth):
+    def recurseDumpTree(self, node, depth, isPresent):
+        
+        if isPresent and (not node.isPresent()):
+            return
         
         indent = '   '
         
@@ -311,7 +321,7 @@ class CommonApplication(object):
 
         packageLocation = node.getPackageLocation()
         if packageLocation != None:
-            print '{0}- packageFolder {1}'.format(indent * (depth + 1),
+            print '{0}- packageFolder \'{1}\''.format(indent * (depth + 1),
                                     packageLocation.getFolderAbsolutePath())
             
         # dump sources, if any
@@ -326,13 +336,21 @@ class CommonApplication(object):
             for enable in enableList:
                 print '{0}- enable {1}'.format(indent * (depth + 1), enable)
                 
+        headerDefinition = node.getHeaderDefinition()
+        if headerDefinition != None:
+            print '{0}- headerDefinition {1}'.format(indent * (depth + 1), headerDefinition)
+               
+        headerPath = node.getHeaderPath()
+        if headerPath != None:
+            print '{0}- headerPath \'{1}\''.format(indent * (depth + 1), headerPath)
+             
         children = node.getTreeChildrenList()
         if children == None:
             return
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpTree(child, depth + 1)            
+            self.recurseDumpTree(child, depth + 1, isPresent)            
             
         return
 
@@ -348,8 +366,7 @@ class CommonApplication(object):
         
     def recurseDumpConfiguration(self, node, depth):
         
-        indent = '   '
-        
+        indent = self.indent
         kind = None
         if node.getObjectType() != None:
             kind = ' ({0})'.format(node.getObjectType())
@@ -361,9 +378,9 @@ class CommonApplication(object):
         requiresList = node.getEnableList()
         if requiresList != None and len(requiresList) > 0:
             for requires in requiresList:
-                print '{0}- requires {1}'.format(indent * (depth + 1), requires)
+                print '{0}- enable {1}'.format(indent * (depth + 1), requires)
         
-        optionsList = node.getOptions()
+        optionsList = node.getOptionsList()
         if optionsList != None and len(optionsList) > 0:
             for key in optionsList.keys():
                 print'{0}- option {1}={2}'.format(indent * (depth + 1), key,
@@ -373,7 +390,7 @@ class CommonApplication(object):
         if buildFolder != None:
             print'{0}- buildFolder=\'{1}\''.format(indent * (depth + 1), buildFolder)
 
-        preprocessorSymbols = node.getPreprocessorSymbols()
+        preprocessorSymbols = node.getPreprocessorSymbolsList()
         if preprocessorSymbols != None:
             for preprocessorSymbol in preprocessorSymbols:
                 print '{0}- preprocessorSymbol=\'{1}\''.format(indent * (depth + 1),
@@ -390,9 +407,9 @@ class CommonApplication(object):
         return
 
     
-    def enableConfiguration(self, configTreesList, sid):
+    def loadConfiguration(self, configTreesList, sid):
         
-        print 'Enable configuration {0}'.format(sid)
+        print 'Load (turn on) configuration {0}'.format(sid)
         print
         
         if sid not in self.allObjectsDict:
@@ -401,50 +418,56 @@ class CommonApplication(object):
         
         configNode = self.allObjectsDict[sid]
         
-        self.enableConfigNode(configNode)
+        updated = self.loadConfigNode(configNode, 0)
+        print 'Updated {0} nodes'.format(updated)
+
         return
     
     
-    def enableConfigNode(self, configNode):
+    def loadConfigNode(self, configNode, depth):
         
         if configNode.getObjectType() != 'configuration':
             raise ErrorWithDescription('Not a configuration node {0}'.format(configNode.getName()))
         
+        indent = self.indent
         if self.isVerbose:
-            print 'enable {0}'.format(configNode.getId())
+            print '{0}process {1}'.format(indent * depth, configNode.getId())
 
-        enableList = configNode.getEnableList()
-        if enableList != None:
-            for enable in enableList:
-                self.enableTreeNode(enable)
+        updated = 0
+        loadList = configNode.getLoadPackagesList()
+        if loadList != None:
+            for load in loadList:
+                updated += self.loadPackageTreeNode(load, depth+1)
         
         treeParent = configNode.getTreeParent()
         if treeParent != None:
-            self.enableConfigNode(treeParent)
+            updated += self.loadConfigNode(treeParent, depth+1)
                
-        return
+        return updated
     
                 
-    def enableTreeNode(self, treeNodeId):
+    def loadPackageTreeNode(self, treeNodeId, depth):
 
         if treeNodeId not in self.allObjectsDict:
-            raise ErrorWithDescription('Missing enebled node {0}'.format(treeNodeId))
+            raise ErrorWithDescription('Missing node to load {0}'.format(treeNodeId))
         
         treeNode = self.allObjectsDict[treeNodeId]
-        if treeNode.getObjectType() not in [ 'component', 'option' ]:
-            raise ErrorWithDescription('Not a package node {0}'.format(treeNode.getName()))
+        treePackageNode = treeNode.getPackageTreeNode()
+        if treePackageNode == None:
+            return
         
+        indent = self.indent
         if self.isVerbose:
-            print 'enable {0}'.format(treeNodeId)
+            print '{0}load {1}'.format(indent * depth, treeNodeId)
             
-        treeNode.setIsEnabled()
+        updated = treePackageNode.setIsPresent()
         
-        enableList = treeNode.getEnableList()
-        if enableList != None:
-            for enable in enableList:
-                self.enableTreeNode(enable)
+        loadPackagesList = treePackageNode.getLoadPackagesList()
+        if loadPackagesList != None:
+            for loadPackages in loadPackagesList:
+                updated += self.loadPackageTreeNode(loadPackages, depth+1)
                 
-        return
+        return updated
     
     
         

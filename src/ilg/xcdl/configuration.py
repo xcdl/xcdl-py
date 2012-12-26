@@ -31,7 +31,13 @@ class Configuration(Object):
         if key in self._kwargs:
             self._preprocessorSymbolsList = self._kwargs[key]
             del self._kwargs[key]
-        
+            
+        key = 'loadPackages'
+        self._loadPackagesList = None
+        if key in self._kwargs:
+            self._loadPackagesList = self._kwargs[key]
+            del self._kwargs[key]
+            
         return
     
 
@@ -40,12 +46,12 @@ class Configuration(Object):
         return 'configuration'
 
 
-    def getScripts(self):
+    def getScriptsList(self):
         
         return self._scriptsList
 
 
-    def getOptions(self):
+    def getOptionsList(self):
         
         return self._optionsList
     
@@ -55,9 +61,14 @@ class Configuration(Object):
         return self._buildFolder
     
     
-    def getPreprocessorSymbols(self):
+    def getPreprocessorSymbolsList(self):
         
         return self._preprocessorSymbolsList
     
     
+    def getLoadPackagesList(self):
+        
+        return self._loadPackagesList
+    
+
     

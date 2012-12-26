@@ -22,7 +22,7 @@ class Component(Object):
 
     def getObjectType(self):
         
-        return "component"
+        return 'component'
 
 
     def getScripts(self):
