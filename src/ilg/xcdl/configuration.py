@@ -9,6 +9,13 @@ class Configuration(Object):
         
         super(Configuration,self).__init__(**kwargs)
         
+        self._childrenList = None
+        key = 'children'
+        if key in self._kwargs:
+            self._childrenList = self._kwargs[key]
+            del self._kwargs[key]
+
+        self._scriptsList = None
         key = 'scripts'
         if key in self._kwargs:
             self._scriptsList = self._kwargs[key]
@@ -39,13 +46,13 @@ class Configuration(Object):
             del self._kwargs[key]
             
         return
-    
 
-    def getObjectType(self):
+
+    def isLoaded(self):
         
-        return 'configuration'
-
-
+        return False
+    
+    
     def getScriptsList(self):
         
         return self._scriptsList
@@ -69,6 +76,10 @@ class Configuration(Object):
     def getLoadPackagesList(self):
         
         return self._loadPackagesList
+
     
+    def getChildrenList(self):
+        
+        return self._childrenList
 
     

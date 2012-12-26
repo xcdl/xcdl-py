@@ -12,7 +12,4 @@ class Interface(Object):
         return
     
 
-    def getObjectType(self):
-        
-        return 'interface'
 

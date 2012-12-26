@@ -13,6 +13,7 @@ from ilg.xcdl.component import Component  # @UnusedImport
 from ilg.xcdl.package import Package  # @UnusedImport
 from ilg.xcdl.configuration import Configuration  # @UnusedImport
 from ilg.xcdl.interface import Interface  # @UnusedImport
+from ilg.xcdl.option import Option  # @UnusedImport
 
 
 class CommonApplication(object):
@@ -135,9 +136,9 @@ class CommonApplication(object):
         for node in localList:            
 
             # warn if some of the keywords were not parsed
-            if len(node.getNonParsedKeywords()) > 0:
+            if len(node.getNonRecognisedKeywords()) > 0:
                 print 'Ignored keywords {0} in {1}'.format(
-                        node.getNonParsedKeywords(), node.getId())
+                        node.getNonRecognisedKeywords(), node.getId())
         
         return
         
@@ -177,7 +178,7 @@ class CommonApplication(object):
             
             for node in oldList:
                 
-                parentName = node.getParentName()
+                parentName = node.getParentId()
                 if parentName == None:
                     newList.append(node)
                     continue
@@ -225,7 +226,7 @@ class CommonApplication(object):
                             format(node.getId(), node.getName(), oldKind, oldName))
               
         # eventually process local parent
-        parentName = node.getParentName()
+        parentName = node.getParentId()
         if parentName != None and parent != None:
             if parent.getId() != parentName:
                 print 'Parent of {0} already is {1}, redefined as {2}, ignored'.format(
@@ -289,32 +290,30 @@ class CommonApplication(object):
         return
     
     
-    def dumpTree(self, packagesTreesList, isPresent):
+    def dumpTree(self, packagesTreesList, isLoaded):
         
-        if not isPresent:
+        if not isLoaded:
             print "The packages trees:"
         else:
             print "The loaded packages trees:"
         
         print
         for tree in packagesTreesList:
-            self.recurseDumpTree(tree, 0, isPresent)
+            self.recurseDumpTree(tree, 0, isLoaded)
         return
     
         
-    def recurseDumpTree(self, node, depth, isPresent):
+    def recurseDumpTree(self, node, depth, isLoaded):
         
-        if isPresent and (not node.isPresent()):
+        if isLoaded and (not node.isLoaded()):
             return
         
         indent = '   '
         
-        kind = None
-        if node.getObjectType() != None:
-            kind = ' ({0}'.format(node.getObjectType())
-            if node.getKind() != None:
-                kind += ',{0}'.format(node.getKind())
-            kind += ')'
+        kind = ' ({0}'.format(node.getObjectType())
+        if node.getKind() != None:
+            kind += ',{0}'.format(node.getKind())
+        kind += ')'
             
         print '{0}* {1} \'{2}\'{3}'.format(indent * depth, node.getId(),
                             node.getName(), kind)
@@ -330,11 +329,11 @@ class CommonApplication(object):
             for source in sourcesList:
                 print '{0}- compile {1}'.format(indent * (depth + 1), source)
 
-        # dump sources, if any
-        enableList = node.getEnableList()
-        if enableList != None:
-            for enable in enableList:
-                print '{0}- enable {1}'.format(indent * (depth + 1), enable)
+        # dump loadPackages, if any
+        loadPackagesList = node.getLoadPackagesList()
+        if loadPackagesList != None:
+            for loadPackages in loadPackagesList:
+                print '{0}- loadPackages {1}'.format(indent * (depth + 1), loadPackages)
                 
         headerDefinition = node.getHeaderDefinition()
         if headerDefinition != None:
@@ -350,7 +349,7 @@ class CommonApplication(object):
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpTree(child, depth + 1, isPresent)            
+            self.recurseDumpTree(child, depth + 1, isLoaded)            
             
         return
 
@@ -367,18 +366,16 @@ class CommonApplication(object):
     def recurseDumpConfiguration(self, node, depth):
         
         indent = self.indent
-        kind = None
-        if node.getObjectType() != None:
-            kind = ' ({0})'.format(node.getObjectType())
+        kind = ' ({0})'.format(node.getObjectType())
             
         print '{0}* {1} \'{2}\'{3}'.format(indent * depth, node.getId(),
                             node.getName(), kind)
 
-        # dump sources, if any
-        requiresList = node.getEnableList()
-        if requiresList != None and len(requiresList) > 0:
-            for requires in requiresList:
-                print '{0}- enable {1}'.format(indent * (depth + 1), requires)
+        # dump loadPackages, if any
+        loadPackagesList = node.getLoadPackagesList()
+        if loadPackagesList != None:
+            for loadPackages in loadPackagesList:
+                print '{0}- loadPackages {1}'.format(indent * (depth + 1), loadPackages)
         
         optionsList = node.getOptionsList()
         if optionsList != None and len(optionsList) > 0:
@@ -426,7 +423,7 @@ class CommonApplication(object):
     
     def loadConfigNode(self, configNode, depth):
         
-        if configNode.getObjectType() != 'configuration':
+        if configNode.getObjectType() != 'Configuration':
             raise ErrorWithDescription('Not a configuration node {0}'.format(configNode.getName()))
         
         indent = self.indent
@@ -460,7 +457,7 @@ class CommonApplication(object):
         if self.isVerbose:
             print '{0}load {1}'.format(indent * depth, treeNodeId)
             
-        updated = treePackageNode.setIsPresent()
+        updated = treePackageNode.setIsLoaded()
         
         loadPackagesList = treePackageNode.getLoadPackagesList()
         if loadPackagesList != None:
