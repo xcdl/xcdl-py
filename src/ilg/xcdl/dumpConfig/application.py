@@ -134,7 +134,13 @@ class Application(CommonApplication):
 
             print
             self.dumpTree(packagesTreesList, True)
-                   
+                  
+            print
+            self.dumpPreprocessorDefinitions(packagesTreesList) 
+            
+            print 
+            self.dumpSourceFiles(packagesTreesList)
+            
         return
 
 

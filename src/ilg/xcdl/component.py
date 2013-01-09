@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from ilg.xcdl.object import Object
-from ilg.xcdl.flavor import FlavorBool
 
 class Component(Object):
     
@@ -10,12 +9,10 @@ class Component(Object):
         
         super(Component,self).__init__(**kwargs)
         
-        # ---------------------------------------------------------------------
-        self._flavor = FlavorBool()
 
         # ---------------------------------------------------------------------
-        self._childrenList = None
         key = 'children'
+        self._childrenList = None
         if key in self._kwargs:
             self._childrenList = self._kwargs[key]
             del self._kwargs[key]
@@ -24,15 +21,17 @@ class Component(Object):
         # ???
         # ---------------------------------------------------------------------
         
-        self._scriptsList = None
-        if 'scripts' in self._kwargs:
-            self._scriptsList = self._kwargs['scripts']
-            del self._kwargs['scripts']
+        key = 'includes'
+        self._includesList = None
+        if key in self._kwargs:
+            self._includesList = self._kwargs[key]
+            del self._kwargs[key]
 
+        key = 'basePath'
         self._basePath = None
-        if 'basePath' in self._kwargs:
-            self._basePath = self._kwargs['basePath']
-            del self._kwargs['basePath']
+        if key in self._kwargs:
+            self._basePath = self._kwargs[key]
+            del self._kwargs[key]
 
         return
     
@@ -42,11 +41,10 @@ class Component(Object):
         return self._childrenList
     
 
-    # ???
     # -------------------------------------------------------------------------    
-    def getScriptsList(self):
+    def getIncludesList(self):
         
-        return self._scriptsList
+        return self._includesList
 
 
     

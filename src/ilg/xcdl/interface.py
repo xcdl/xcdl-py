@@ -10,6 +10,11 @@ class Interface(Object):
         super(Interface,self).__init__(**kwargs)
         
         return
+
     
+    def getDefaultIsEnabled(self):
+        
+        # interfaces start as enabled
+        return True
 
 

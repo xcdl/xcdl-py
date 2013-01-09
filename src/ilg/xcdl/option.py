@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from ilg.xcdl.object import Object
-from ilg.xcdl.flavor import FlavorBool
 
 class Option(Object):
     
@@ -10,9 +9,6 @@ class Option(Object):
         
         super(Option,self).__init__(**kwargs)
         
-        # ---------------------------------------------------------------------
-        self._flavor = FlavorBool()
-
         return
     
 
