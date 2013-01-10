@@ -41,7 +41,7 @@ class CommonApplication(object):
         
         self.argv = argv
         
-        self.isVerbose = False
+        self.verbosity = 0
 
         # initialise the dictionary where all objects will be stored
         self.allObjectsDict = {}
@@ -53,27 +53,27 @@ class CommonApplication(object):
         return
     
     
-    def loadPackagesTrees(self, packagesFilePathList):
+    def processPackagesTrees(self, packagesFilePathList):
         
         # build a list of trees, for all given packages
         packagesTreesList = []
                 
         for filePath in packagesFilePathList:
             
-            packsList = self.loadPackageTree(filePath)
+            packsList = self.processPackageTree(filePath)
             if packsList != None:
                 packagesTreesList.extend(packsList)
         
         return packagesTreesList
     
 
-    def loadPackageTree(self, packagePath):
+    def processPackageTree(self, packagePath):
                         
         packageAbsolutePath = os.path.abspath(packagePath)
 
         if os.path.isdir(packageAbsolutePath):
             print 'Process package folder {0}'.format(packagePath)
-            rootList = self.recurseProcessFolder(None, packageAbsolutePath)
+            rootList = self.processFolderRecursive(None, packageAbsolutePath)
         elif os.path.isfile(packagePath):
             print 'Process package file {0}'.format(packagePath)
             # process the given script and recurse
@@ -84,7 +84,7 @@ class CommonApplication(object):
         return rootList
 
 
-    def loadConfig(self, configFilePath):
+    def processConfigFile(self, configFilePath):
                 
         print 'Process configuration file \'{0}\''.format(configFilePath)
         configFileAbsolutePath = os.path.abspath(self.configFilePath)
@@ -94,14 +94,14 @@ class CommonApplication(object):
         return rootList
     
     
-    def recurseProcessFolder(self, parent, folderAbsolutePath):
+    def processFolderRecursive(self, parent, folderAbsolutePath):
         
         crtParent = parent
         localList = []
         for path in self.defaultScripts:
             tentativeFileAbsolutePath = os.path.join(folderAbsolutePath, path)
             if os.path.isfile(tentativeFileAbsolutePath):
-                if self.isVerbose:
+                if self.verbosity > 2:
                     print 'is package'
                 
                 packageLocation = PackageLocation(folderAbsolutePath, tentativeFileAbsolutePath)
@@ -112,16 +112,16 @@ class CommonApplication(object):
         for name in os.listdir(folderAbsolutePath):
             absolutePath = os.path.join(folderAbsolutePath, name)
             if os.path.isdir(absolutePath):
-                if self.isVerbose:
+                if self.verbosity > 2:
                     print 'subfolder {0}'.format(absolutePath)
-                self.recurseProcessFolder(crtParent, absolutePath)
+                self.processFolderRecursive(crtParent, absolutePath)
         
         return localList
     
     
     def processScript(self, parent, scriptAbsolutePath, packageLocation):
         
-        if self.isVerbose:
+        if self.verbosity > 1:
             print 'process script {0}'.format(scriptAbsolutePath)
         
         # list used to collect all objects contributed by encountered 
@@ -318,11 +318,11 @@ class CommonApplication(object):
         
         print
         for tree in packagesTreesList:
-            self.recurseDumpTree(tree, 0, isLoaded)
+            self.dumpTreeRecursive(tree, 0, isLoaded)
         return
     
         
-    def recurseDumpTree(self, node, depth, isLoaded):
+    def dumpTreeRecursive(self, node, depth, isLoaded):
         
         if isLoaded and (not node.isLoaded()):
             return
@@ -371,7 +371,7 @@ class CommonApplication(object):
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpTree(child, depth + 1, isLoaded)            
+            self.dumpTreeRecursive(child, depth + 1, isLoaded)            
             
         return
 
@@ -381,11 +381,11 @@ class CommonApplication(object):
         print "The configuration trees:"
         print
         for tree in configTreesList:
-            self.recurseDumpConfiguration(tree, 0)
+            self.dumpConfigurationRecursive(tree, 0)
         return
     
         
-    def recurseDumpConfiguration(self, node, depth):
+    def dumpConfigurationRecursive(self, node, depth):
         
         indent = self.indent
         kind = ' ({0})'.format(node.getObjectType())
@@ -421,7 +421,7 @@ class CommonApplication(object):
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpConfiguration(child, depth + 1)
+            self.dumpConfigurationRecursive(child, depth + 1)
                         
         return
 
@@ -429,7 +429,8 @@ class CommonApplication(object):
     def loadConfiguration(self, configTreesList, sid):
         
         print 'Load configuration {0}'.format(sid)
-        print
+        if self.verbosity > 1:
+            print
         
         if sid not in self.allObjectsDict:
             print 'Missing id, cancelled'
@@ -449,7 +450,7 @@ class CommonApplication(object):
             raise ErrorWithDescription('Not a configuration node {0}'.format(configNode.getName()))
         
         indent = self.indent
-        if self.isVerbose:
+        if self.verbosity > 1:
             print '{0}process {1}'.format(indent * depth, configNode.getId())
 
         updated = 0
@@ -485,7 +486,7 @@ class CommonApplication(object):
             updated = 0
             return updated
         
-        if self.isVerbose:
+        if self.verbosity > 1:
             print '{0}load {1}'.format(indent * depth, treeNodeId)
             
         updated = treePackageNode.setIsLoadedRecursive()
@@ -504,7 +505,7 @@ class CommonApplication(object):
         
         print
         #for tree in packagesTreesList:
-        #    self.recurseDumpPreprocessorDefinitions(tree, 0)
+        #    self.dumpPreprocessorDefinitionsRecursive(tree, 0)
         
         headersDict = self.buildHeadersDict(packagesTreesList)
         for key in headersDict.iterkeys():
@@ -516,7 +517,7 @@ class CommonApplication(object):
         return
     
     
-    def recurseDumpPreprocessorDefinitions(self, node, depth):
+    def dumpPreprocessorDefinitionsRecursive(self, node, depth):
 
         if not node.isLoaded():
             return
@@ -526,7 +527,7 @@ class CommonApplication(object):
             
             (headerDefinition, headerFile) = headerLineAndFileName
             
-            if self.isVerbose:
+            if self.verbosity:
                 print 'process {0}'.format(node.getId())
 
             print 'file: \'{0}\''.format(headerFile)
@@ -539,7 +540,7 @@ class CommonApplication(object):
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpPreprocessorDefinitions(child, depth + 1)            
+            self.dumpPreprocessorDefinitionsRecursive(child, depth + 1)            
 
 
     def buildHeadersDict(self, packagesTreesList):
@@ -561,7 +562,7 @@ class CommonApplication(object):
             
             (headerDefinition, headerFile) = headerLineAndFileName
             
-            if self.isVerbose:
+            if self.verbosity > 1:
                 print 'process {0}'.format(node.getId())
 
                 print 'file: \'{0}\''.format(headerFile)
@@ -590,7 +591,7 @@ class CommonApplication(object):
         
         print
         #for tree in packagesTreesList:
-        #    self.recurseDumpSourceFiles(tree, 0)
+        #    self.dumpSourceFilesRecursive(tree, 0)
         
         sourcesDict = self.buildSourcesDict(packagesTreesList)
         for key in sourcesDict.iterkeys():
@@ -602,7 +603,7 @@ class CommonApplication(object):
         return
 
 
-    def recurseDumpSourceFiles(self, node, depth):
+    def dumpSourceFilesRecursive(self, node, depth):
 
         if not node.isLoaded():
             return
@@ -612,20 +613,20 @@ class CommonApplication(object):
             sourceFiles = node.getSourceFilesList()
             if sourceFiles != None:
             
-                if self.isVerbose:
+                if self.verbosity:
                     print 'process {0}'.format(node.getId())
 
                 packageFolder = node.getPackageLocation().getFolderAbsolutePath()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'package folder: \'{0}\''.format(packageFolder)
 
                 treeRoot = node.getTreeRoot()
                 buildSubFolder = treeRoot.getBuildSubFolderWithDefault()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'build subfolder: \'{0}\''.format(buildSubFolder)
                 
                 rootPackageFolder = treeRoot.getPackageLocation().getFolderAbsolutePath()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'root package folder: \'{0}\''.format(rootPackageFolder)
                 
                 sourcesPathsList = node.getSourcePathsListRecursive()
@@ -670,7 +671,7 @@ class CommonApplication(object):
         
         # iterate through all children
         for child in children:           
-            self.recurseDumpSourceFiles(child, depth + 1)            
+            self.dumpSourceFilesRecursive(child, depth + 1)            
     
 
     def buildSourcesDict(self, packagesTreesList):
@@ -692,20 +693,20 @@ class CommonApplication(object):
             sourceFiles = node.getSourceFilesList()
             if sourceFiles != None:
             
-                if self.isVerbose:
+                if self.verbosity > 1:
                     print 'process {0}'.format(node.getId())
 
                 packageFolder = node.getPackageLocation().getFolderAbsolutePath()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'package folder: \'{0}\''.format(packageFolder)
 
                 treeRoot = node.getTreeRoot()
                 buildSubFolder = treeRoot.getBuildSubFolderWithDefault()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'build subfolder: \'{0}\''.format(buildSubFolder)
                 
                 rootPackageFolder = treeRoot.getPackageLocation().getFolderAbsolutePath()
-                #if self.isVerbose:
+                #if self.verbosity:
                 #    print 'root package folder: \'{0}\''.format(rootPackageFolder)
                 
                 sourcesPathsList = node.getSourcePathsListRecursive()
@@ -714,14 +715,14 @@ class CommonApplication(object):
                 
                       
                 for sourceFile in sourceFiles:
-                    if self.isVerbose:
+                    if self.verbosity > 1:
                         print 'source file: \'{0}\''.format(sourceFile)
 
                     foundSourcePath = None
                     for sourcePath in sourcesPathsList:
                         sourceAbsolutePath = os.path.join(packageFolder, sourcePath, sourceFile)
                         if os.path.isfile(sourceAbsolutePath):
-                            if self.isVerbose:
+                            if self.verbosity > 1:
                                 print 'source file path: \'{0}\''.format(sourceAbsolutePath)
                             foundSourcePath = sourcePath
                             break
@@ -744,7 +745,7 @@ class CommonApplication(object):
                     buildPathList.extend(subPathList[:-1])
                     
                     buildPathString = os.sep.join(buildPathList)
-                    if self.isVerbose:
+                    if self.verbosity > 1:
                         print 'build path: {0}'.format(buildPathString)
                     
                     if buildPathString not in sourcesDict:
@@ -758,7 +759,8 @@ class CommonApplication(object):
                     
                     # append the current source file to the path
                     sourcesDict[buildPathString].append(crtSourceDict)
-                print
+                if self.verbosity > 1:
+                    print
              
         children = node.getTreeChildrenList()
         if children == None:

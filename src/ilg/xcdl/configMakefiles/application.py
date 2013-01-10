@@ -19,7 +19,7 @@ Options:
         the output folder
         
     -v, --verbose
-        print progress output
+        print progress output; more increase verbosity
 
     -h, --help
         print this message
@@ -89,7 +89,7 @@ class Application(CommonApplication):
                 elif o in ('-o', '--output'):
                     self.outputFolder = a
                 elif o in ('-v', '--verbose'):
-                    self.isVerbose = True
+                    self.verbosity += 1
                 elif o in ('-h', '--help'):
                     self.usage()
                     return 0
@@ -133,11 +133,11 @@ class Application(CommonApplication):
         
         self.validate()
         
-        packagesTreesList = self.loadPackagesTrees(self.packagesFilePathList)
+        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList)
 
-        configTreesList = self.loadConfig(self.configFilePath)
+        configTreesList = self.processConfigFile(self.configFilePath)
 
-        if self.isVerbose:
+        if self.verbosity > 1:
             print
             self.dumpTree(packagesTreesList, False)
         
@@ -147,14 +147,14 @@ class Application(CommonApplication):
         print
         self.loadConfiguration(configTreesList, self.desiredConfigurationId)
 
-        if self.isVerbose:
+        if self.verbosity > 1:
             print
             self.dumpTree(packagesTreesList, True)
 
         if not os.path.isdir(self.outputFolder):
             os.makedirs(self.outputFolder)
                                        
-        if self.isVerbose:
+        if self.verbosity:
             print
 
         self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder)
@@ -170,7 +170,7 @@ class Application(CommonApplication):
         for fileRelativePath in headersDict.iterkeys():
             
             fileAbsolutePath = os.path.join(outputFolder, fileRelativePath)
-            if self.isVerbose:
+            if self.verbosity > 1:
                 print fileAbsolutePath
 
             (folderAbsolutePath,_) = os.path.split(fileAbsolutePath)
@@ -182,14 +182,14 @@ class Application(CommonApplication):
             textFile.write('// {0}\n'.format(CommonApplication.getDoNotEditMessage()))
             headerLines = headersDict[fileRelativePath]
             for headerLine in headerLines:
-                if self.isVerbose:
+                if self.verbosity > 1:
                     print headerLine
                 textFile.write(headerLine)
                 textFile.write('\n')
                 
             textFile.close()
 
-        if self.isVerbose:
+        if self.verbosity > 1:
             print
             
         return
@@ -202,7 +202,7 @@ class Application(CommonApplication):
             
             folderAbsolutePath = os.path.join(outputFolder, folderRelativePath)
             if not os.path.isdir(folderAbsolutePath):
-                if self.isVerbose:
+                if self.verbosity > 0:
                     print('Creating folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
@@ -217,7 +217,7 @@ class Application(CommonApplication):
         
         subdirAbsolutePath = os.path.join(folderAbsolutePath, 'subdir.mk')
         
-        if self.isVerbose:
+        if self.verbosity > 0:
             if not os.path.isfile(subdirAbsolutePath):
                 print('Writing file \'{0}\''.format(subdirAbsolutePath))
             else:
@@ -355,7 +355,7 @@ class Application(CommonApplication):
         
         makefileAbsolutePath = os.path.join(outputFolder, 'makefile')
         
-        if self.isVerbose:
+        if self.verbosity > 0:
             if not os.path.isfile(makefileAbsolutePath):
                 print('Writing file \'{0}\''.format(makefileAbsolutePath))
             else:
@@ -434,7 +434,7 @@ class Application(CommonApplication):
         
         objectsMkAbsolutePath = os.path.join(outputFolder, 'objects.mk')
         
-        if self.isVerbose:
+        if self.verbosity > 0:
             if not os.path.isfile(objectsMkAbsolutePath):
                 print('Writing file \'{0}\''.format(objectsMkAbsolutePath))
             else:
@@ -456,7 +456,7 @@ class Application(CommonApplication):
         
         sourcesMkAbsolutePath = os.path.join(outputFolder, 'sources.mk')
         
-        if self.isVerbose:
+        if self.verbosity > 0:
             if not os.path.isfile(sourcesMkAbsolutePath):
                 print('Writing file \'{0}\''.format(sourcesMkAbsolutePath))
             else:

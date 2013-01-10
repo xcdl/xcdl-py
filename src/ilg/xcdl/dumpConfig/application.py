@@ -81,7 +81,7 @@ class Application(CommonApplication):
                 elif o in ('-i', '--id'):
                     self.desiredConfigurationId = a
                 elif o in ('-v', '--verbose'):
-                    self.isVerbose = True
+                    self.verbosity = True
                 elif o in ('-h', '--help'):
                     self.usage()
                     return 0
@@ -116,10 +116,10 @@ class Application(CommonApplication):
         print "Dump the configuration tree."
         print
         
-        packagesTreesList = self.loadPackagesTrees(self.packagesFilePathList)
+        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList)
 
         if self.configFilePath != None:
-            configTreesList = self.loadConfig(self.configFilePath)
+            configTreesList = self.processConfigFile(self.configFilePath)
 
         print
         self.dumpTree(packagesTreesList, False)
