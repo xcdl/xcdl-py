@@ -101,9 +101,10 @@ class Application(CommonApplication):
         except ErrorWithDescription as err:
             print err
     
-        finally: 
-            print   
-            print '[done]'
+        finally:
+            if self.verbosity > 0:
+                print   
+                print '[done]'
             
         return 0        
 
@@ -127,9 +128,10 @@ class Application(CommonApplication):
 
     def process(self):
         
-        print
-        print "Create the build folders and the makefiles."
-        print
+        if self.verbosity > 0:
+            print
+            print "Create the build folders with distributed makefiles."
+            print
         
         self.validate()
         
@@ -145,7 +147,8 @@ class Application(CommonApplication):
             self.dumpConfiguration(configTreesList)
 
         print
-        self.loadConfiguration(configTreesList, self.desiredConfigurationId)
+        configNode = self.loadConfiguration(configTreesList, 
+                                            self.desiredConfigurationId)
 
         if self.verbosity > 1:
             print
@@ -159,7 +162,7 @@ class Application(CommonApplication):
 
         self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder)
         
-        self.generateAllMakeFiles(packagesTreesList, self.outputFolder)
+        self.generateAllMakeFiles(packagesTreesList, self.outputFolder, configNode)
         
         return
 
@@ -195,7 +198,7 @@ class Application(CommonApplication):
         return
 
 
-    def generateAllMakeFiles(self, packagesTreesList, outputFolder):
+    def generateAllMakeFiles(self, packagesTreesList, outputFolder, configNode):
         
         sourcesDict = self.buildSourcesDict(packagesTreesList)
         for folderRelativePath in sourcesDict.iterkeys():
@@ -207,8 +210,12 @@ class Application(CommonApplication):
                 os.makedirs(folderAbsolutePath)
             
             self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath)
-            
-        self.generateRootMakeFiles(sourcesDict, outputFolder)
+        
+        artifactFileName = configNode.getArtifactFileNameRecursive()
+        if artifactFileName == None:
+            raise ErrorWithDescription('Missing artifact file name in configuration')
+        
+        self.generateRootMakeFiles(sourcesDict, outputFolder, artifactFileName)
             
         return
 
@@ -233,7 +240,7 @@ class Application(CommonApplication):
         ccList = self.groupSourceFilesByType(sources, ['.c'])
         cppList = self.groupSourceFilesByType(sources, ['.cpp'])
         asmList = self.groupSourceFilesByType(sources, ['.S'])
-        
+                
         if len(ccList) > 0:
             f.write('C_SRCS += \\\n')
             
@@ -290,7 +297,7 @@ class Application(CommonApplication):
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
                 sourceAbsolutePath = e['sourceAbsolutePath']
                 f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
-                f.write('    @echo \'Building file: $<\'\n')
+                f.write('\t@echo \'Building file: $<\'\n')
                 
                 fType = e['type']
                 if fType == '.cpp':
@@ -300,23 +307,43 @@ class Application(CommonApplication):
                     toolName = 'clang'
                     toolName = 'LLVM Clang'
                 
-                f.write('    @echo \'Invoking: {0}\'\n'.format(toolDesc))
+                f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
-                f.write('    {0}'.format(toolName))
+                f.write('\t{0}'.format(toolName))
                 f.write(' -DDEBUG=1')
-                f.write(' -I"..."')
+                
+                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete)
+                for includeAbsolutePath in includeAbsolutePathList:
+                    f.write(' -I"{0}"'.format(includeAbsolutePath))
+                    
                 f.write(' -O0 -emit-llvm -g3 -Wall -c -fmessage-length=0 -fsigned-char')
                 f.write(' -MMD -MP -o "$@" "$<"')
                 f.write('\n')
                 
-                f.write('    @echo \'Finished file: $<\'\n')
-                f.write('    @echo \' \'\n')
+                f.write('\t@echo \'Finished file: $<\'\n')
+                f.write('\t@echo \' \'\n')
                 f.write('\n')
                                 
         f.close()
 
         return
-    
+   
+   
+    def computeIncludeAbsolutePathList(self, treeNode, fileNameComplete):
+        
+        localList = []
+        if treeNode == None:
+            print 'Internal error: Missing node for source {0}'.format(fileNameComplete)
+        else:
+            packageTreeNode = treeNode.getPackageTreeNode()
+            if packageTreeNode == None:
+                print 'Internal error: Missing parent node for source {0}'.format(fileNameComplete)
+            else:
+                localList = packageTreeNode.getBuildIncludeFoldersRecursive()
+                # TODO substitute macros
+                   
+        return localList
+        
 
     def generateDoNotEditMessage(self, builtinFile):
         
@@ -351,7 +378,7 @@ class Application(CommonApplication):
         return path.replace(' ', '\\ ')
         
 
-    def generateRootMakeFiles(self, sourcesDict, outputFolder):
+    def generateRootMakeFiles(self, sourcesDict, outputFolder, artifactFileName):
         
         makefileAbsolutePath = os.path.join(outputFolder, 'makefile')
         
@@ -370,6 +397,11 @@ class Application(CommonApplication):
         f.write('\n')
         f.write('-RM := {0} -rf\n'.format('rm'))        
         f.write('\n')
+
+        f.write('# All Target\n')
+        f.write('all: {0} secondary-outputs\n'.format(artifactFileName))
+        f.write('\n')
+
         f.write('# All of the sources participating in the build are defined here\n')        
         f.write('-include sources.mk\n')
         
@@ -397,25 +429,19 @@ class Application(CommonApplication):
         f.write('# Add inputs and outputs from these tool invocations to the build variables\n')
         f.write('\n')
 
-        target = 'x.elf'
-        
-        f.write('# All Target\n')
-        f.write('all: {0} secondary-outputs\n'.format(target))
-        f.write('\n')
-
         f.write('# Tool invocations\n')
-        f.write('{0}: $(BCS) $(USER_OBJS)\n'.format(target))
-        f.write('    @echo \'Building target: $@\'\n')
-        f.write('    @echo \'Invoking: {0}\'\n'.format('LLVM C++ linker'))
-        f.write('    {0} -v -native -o "{1}" $(BCS) $(USER_OBJS) $(LIBS)\n'.format('clang++', target))
-        f.write('    @echo \'Finishing building target: $@\'\n')
-        f.write('    @echo \' \'\n')
+        f.write('{0}: $(BCS) $(USER_OBJS)\n'.format(artifactFileName))
+        f.write('\t@echo \'Building target: $@\'\n')
+        f.write('\t@echo \'Invoking: {0}\'\n'.format('LLVM C++ linker'))
+        f.write('\t{0} -native -o "{1}" $(BCS) $(USER_OBJS) $(LIBS)\n'.format('clang++', artifactFileName))
+        f.write('\t@echo \'Finishing building target: $@\'\n')
+        f.write('\t@echo \' \'\n')
         f.write('\n')
 
         f.write('# Other Targets\n')
         f.write('clean:\n')
-        f.write('    -$(RM) $(BCS)$(CC_DEPS)$(CPP_DEPS)$(LLVM_BC_EXECUTABLES) {0}\n'.format(target))
-        f.write('    @echo \' \'\n')
+        f.write('\t-$(RM) $(BCS)$(CC_DEPS)$(CPP_DEPS)$(LLVM_BC_EXECUTABLES) {0}\n'.format(artifactFileName))
+        f.write('\t@echo \' \'\n')
         f.write('\n')
         
         f.write('secondary-outputs: $(LLVM_BC_EXECUTABLES)\n')

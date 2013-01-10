@@ -23,6 +23,12 @@ class Package(Component):
         if key in self._kwargs:
             self._buildSubFolder = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'buildIncludeFolders'
+        self._buildIncludeFoldersList = None
+        if key in self._kwargs:
+            self._buildIncludeFoldersList = self._kwargs[key]
+            del self._kwargs[key]
             
         return
     
@@ -74,5 +80,25 @@ class Package(Component):
             return self._buildSubFolder
         
         return self.getId()
+       
+       
+    def getBuildIncludeFolders(self):
         
+        return self._buildIncludeFoldersList
+    
+    
+    def getBuildIncludeFoldersRecursive(self):
+        
+        localList = []
+        if self._buildIncludeFoldersList != None:
+            localList.extend(self._buildIncludeFoldersList)
+        
+            
+        if self._treeParent != None:
+            parentPackageTreeNode = self._treeParent.getPackageTreeNode()
+            if parentPackageTreeNode != None:
+                localList.extend(parentPackageTreeNode.getBuildIncludeFoldersRecursive())
+ 
+        return localList
+    
     

@@ -72,21 +72,22 @@ class CommonApplication(object):
         packageAbsolutePath = os.path.abspath(packagePath)
 
         if os.path.isdir(packageAbsolutePath):
-            print 'Process package folder {0}'.format(packagePath)
+            print 'Process package folder \'{0}\'.'.format(packagePath)
             rootList = self.processFolderRecursive(None, packageAbsolutePath)
         elif os.path.isfile(packagePath):
-            print 'Process package file {0}'.format(packagePath)
+            print 'Process package file \'{0}\'.'.format(packagePath)
             # process the given script and recurse
             rootList = self.processScript(None, packageAbsolutePath)
         else:
             raise ErrorWithDescription("Path not a folder or a file")
-            
+                    
         return rootList
 
 
     def processConfigFile(self, configFilePath):
-                
-        print 'Process configuration file \'{0}\''.format(configFilePath)
+        
+        print        
+        print 'Process configuration file \'{0}\'.'.format(configFilePath)
         configFileAbsolutePath = os.path.abspath(self.configFilePath)
         
         # process the given script and recurse
@@ -428,8 +429,8 @@ class CommonApplication(object):
     
     def loadConfiguration(self, configTreesList, sid):
         
-        print 'Load configuration {0}'.format(sid)
         if self.verbosity > 1:
+            print 'Load configuration id=\'{0}\''.format(sid)
             print
         
         if sid not in self.allObjectsDict:
@@ -437,11 +438,12 @@ class CommonApplication(object):
             return
         
         configNode = self.allObjectsDict[sid]
+        print 'Load configuration node \'{0}\'.'.format(configNode.getName())
         
         updated = self.loadConfigNode(configNode, 0)
-        print 'Updated {0} nodes'.format(updated)
+        print '{0} nodes loaded.'.format(updated)
 
-        return
+        return configNode
     
     
     def loadConfigNode(self, configNode, depth):
@@ -756,6 +758,7 @@ class CommonApplication(object):
                     crtSourceDict['fileName'] = sourceFile
                     #crtSourceDict['buildPathList'] = buildPathList
                     crtSourceDict['sourceAbsolutePath'] = sourceAbsolutePath
+                    crtSourceDict['repoNode'] = node
                     
                     # append the current source file to the path
                     sourcesDict[buildPathString].append(crtSourceDict)

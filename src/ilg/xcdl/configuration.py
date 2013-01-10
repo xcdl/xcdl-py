@@ -44,6 +44,12 @@ class Configuration(Object):
         if key in self._kwargs:
             self._loadPackagesList = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'artifactFileName'
+        self._artifactFileName = None
+        if key in self._kwargs:
+            self._artifactFileName = self._kwargs[key]
+            del self._kwargs[key]
             
         return
 
@@ -81,5 +87,23 @@ class Configuration(Object):
     def getChildrenList(self):
         
         return self._childrenList
+
+
+    def getArtifactFileName(self):
+        
+        return self._artifactFileName
+
+
+    def getArtifactFileNameRecursive(self):
+        
+        if self._artifactFileName != None:
+            return self._artifactFileName
+        
+        if self._treeParent != None:
+            return self._treeParent.getArtifactFileNameRecursive()
+        
+        return None
+    
+    
 
     
