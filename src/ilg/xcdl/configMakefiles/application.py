@@ -237,27 +237,19 @@ class Application(CommonApplication):
         if len(ccList) > 0:
             f.write('C_SRCS += \\\n')
             
-            i = 0
             for e in ccList:
                 p = e['sourceAbsolutePath']
                 f.write(self.expandPathSpaces(p))
-                i+=1
-                if i < len(ccList):
-                    f.write(' \\')
-                f.write('\n')
+                f.write(' \\\n')
             f.write('\n')
         
         if len(cppList) > 0:
             f.write('CPP_SRCS += \\\n')
             
-            i = 0
             for e in cppList:
                 p = e['sourceAbsolutePath']
                 f.write(self.expandPathSpaces(p))
-                i+=1
-                if i < len(cppList):
-                    f.write(' \\')
-                f.write('\n')                          
+                f.write(' \\\n')
             f.write('\n')
 
         # TODO: process assembly files
@@ -270,31 +262,23 @@ class Application(CommonApplication):
         if len(allList) > 0:
             f.write('{0} += \\\n'.format('BCS'))
             
-            i = 0
             for e in allList:
                 fileNameComplete = e['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
                 p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
                 f.write(self.expandPathSpaces(p))
-                i+=1
-                if i < len(allList):
-                    f.write(' \\')
-                f.write('\n')                          
+                f.write(' \\\n')
             f.write('\n')
 
         if len(cppList) > 0:
             f.write('CPP_DEPS += \\\n')
             
-            i = 0
             for e in cppList:
                 fileNameComplete = e['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
                 p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
                 f.write(self.expandPathSpaces(p))
-                i+=1
-                if i < len(cppList):
-                    f.write(' \\')
-                f.write('\n')                          
+                f.write(' \\\n')
             f.write('\n')
 
         if len(allList) > 0:
