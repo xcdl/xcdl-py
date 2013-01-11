@@ -29,7 +29,10 @@ class Package(Component):
         if key in self._kwargs:
             self._buildIncludeFoldersList = self._kwargs[key]
             del self._kwargs[key]
-            
+        
+        # set only to root nodes
+        self._repositoryFolder = None 
+           
         return
     
     
@@ -87,6 +90,7 @@ class Package(Component):
         return self._buildIncludeFoldersList
     
     
+    # always return a list, not None
     def getBuildIncludeFoldersRecursive(self):
         
         localList = []
@@ -101,4 +105,14 @@ class Package(Component):
  
         return localList
     
+    
+    def setRepositoryFolderAbsolutePath(self, repositoryFolder):
+        
+        self._repositoryFolder = repositoryFolder
+        return
+    
+    
+    def getRepositoryFolderAbsolutePath(self):
+        
+        return self._repositoryFolder
     

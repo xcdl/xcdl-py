@@ -80,7 +80,10 @@ class CommonApplication(object):
             rootList = self.processScript(None, packageAbsolutePath)
         else:
             raise ErrorWithDescription("Path not a folder or a file")
-                    
+        
+        for node in rootList:
+            node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
+                        
         return rootList
 
 

@@ -223,7 +223,7 @@ class Application(CommonApplication):
                     print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
-            self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath)
+            self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder)
         
         artifactFileName = configNode.getArtifactFileNameRecursive()
         if artifactFileName == None:
@@ -234,7 +234,7 @@ class Application(CommonApplication):
         return
 
     
-    def generateSubdirMk(self, folderAbsolutePath, sourcesDict, folderRelativePath):
+    def generateSubdirMk(self, folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder):
         
         subdirAbsolutePath = os.path.join(folderAbsolutePath, 'subdir.mk')
         
@@ -311,7 +311,7 @@ class Application(CommonApplication):
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
                 sourceAbsolutePath = e['sourceAbsolutePath']
                 f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
-                f.write('\t@echo \'Building file: $<\'\n')
+                f.write('\t@echo \'XCDL Building file: $<\'\n')
                 
                 fType = e['type']
                 if fType == '.cpp':
@@ -326,7 +326,7 @@ class Application(CommonApplication):
                 f.write('\t{0}'.format(toolName))
                 f.write(' -DDEBUG=1')
                 
-                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete)
+                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete, outputFolder)
                 for includeAbsolutePath in includeAbsolutePathList:
                     f.write(' -I"{0}"'.format(includeAbsolutePath))
                     
@@ -343,7 +343,7 @@ class Application(CommonApplication):
         return
    
    
-    def computeIncludeAbsolutePathList(self, treeNode, fileNameComplete):
+    def computeIncludeAbsolutePathList(self, treeNode, fileNameComplete, buildFolder):
         
         localList = []
         if treeNode == None:
@@ -353,9 +353,18 @@ class Application(CommonApplication):
             if packageTreeNode == None:
                 print 'Internal error: Missing parent node for source {0}'.format(fileNameComplete)
             else:
-                localList = packageTreeNode.getBuildIncludeFoldersRecursive()
-                # TODO substitute macros
-                   
+                localList2 = packageTreeNode.getBuildIncludeFoldersRecursive()
+                
+                for path in localList2:
+                    if path.find('$(REPO_DIR)') != -1:
+                        repoFolder = treeNode.getTreeRoot().getRepositoryFolderAbsolutePath()
+                        path = path.replace('$(REPO_DIR)', repoFolder)
+                    elif path.find('$(BUILD_DIR)') != -1:
+                        path = path.replace('$(BUILD_DIR)', buildFolder)
+
+                    # add replaced or original path o response list
+                    localList.append(path)
+                                       
         return localList
         
 
@@ -445,7 +454,7 @@ class Application(CommonApplication):
 
         f.write('# Tool invocations\n')
         f.write('{0}: $(BCS) $(USER_OBJS)\n'.format(artifactFileName))
-        f.write('\t@echo \'Building target: $@\'\n')
+        f.write('\t@echo \'XCDL Building target: $@\'\n')
         f.write('\t@echo \'Invoking: {0}\'\n'.format('LLVM C++ linker'))
         f.write('\t{0} -native -o "{1}" $(BCS) $(USER_OBJS) $(LIBS)\n'.format('clang++', artifactFileName))
         f.write('\t@echo \'Finishing building target: $@\'\n')
