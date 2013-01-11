@@ -18,6 +18,9 @@ Options:
     -o, --output
         the output folder
         
+    -l, --linearise
+        linearise the build subfolder
+        
     -v, --verbose
         print progress output; more increase verbosity
 
@@ -52,6 +55,8 @@ class Application(CommonApplication):
         
         self.outputFolder = None
         
+        self.doLinearise = False
+        
         return
     
 
@@ -64,8 +69,9 @@ class Application(CommonApplication):
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'c:p:i:o:hv', 
-                            ['config=', 'packages=', 'id=', 'output=', 'help', 'verbose'])
+            (opts, args) = getopt.getopt(self.argv[1:], 'c:p:i:o:lhv', 
+                            ['config=', 'packages=', 'id=', 'output=', 
+                             'linearise', 'help', 'verbose'])
         except getopt.GetoptError as err:
             # print help information and exit:
             print str(err) # will print something like "option -a not recognised"
@@ -88,6 +94,8 @@ class Application(CommonApplication):
                     self.desiredConfigurationId = a
                 elif o in ('-o', '--output'):
                     self.outputFolder = a
+                elif o in ('-l', '--linearise'):
+                    self.doLinearise = True
                 elif o in ('-v', '--verbose'):
                     self.verbosity += 1
                 elif o in ('-h', '--help'):
@@ -160,19 +168,25 @@ class Application(CommonApplication):
         if self.verbosity:
             print
 
-        self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder)
+        outputSubFolder = configNode.getBuildFolderRecursiveWithSubstitutions()
+        if self.doLinearise:
+            outputSubFolder = outputSubFolder.replace(os.sep, '_')
         
-        self.generateAllMakeFiles(packagesTreesList, self.outputFolder, configNode)
+        #print outputSubFolder
+        
+        self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder, outputSubFolder)
+        
+        self.generateAllMakeFiles(packagesTreesList, configNode, self.outputFolder, outputSubFolder)
         
         return
 
 
-    def generatePreprocessorDefinitions(self, packagesTreesList, outputFolder):
+    def generatePreprocessorDefinitions(self, packagesTreesList, outputFolder, outputSubFolder):
         
         headersDict = self.buildHeadersDict(packagesTreesList)
         for fileRelativePath in headersDict.iterkeys():
             
-            fileAbsolutePath = os.path.join(outputFolder, fileRelativePath)
+            fileAbsolutePath = os.path.join(outputFolder, outputSubFolder, fileRelativePath)
             if self.verbosity > 1:
                 print fileAbsolutePath
 
@@ -198,15 +212,15 @@ class Application(CommonApplication):
         return
 
 
-    def generateAllMakeFiles(self, packagesTreesList, outputFolder, configNode):
+    def generateAllMakeFiles(self, packagesTreesList, configNode, outputFolder, outputSubFolder):
         
         sourcesDict = self.buildSourcesDict(packagesTreesList)
         for folderRelativePath in sourcesDict.iterkeys():
             
-            folderAbsolutePath = os.path.join(outputFolder, folderRelativePath)
+            folderAbsolutePath = os.path.join(outputFolder, outputSubFolder, folderRelativePath)
             if not os.path.isdir(folderAbsolutePath):
                 if self.verbosity > 0:
-                    print('Creating folder \'{0}\''.format(folderAbsolutePath))
+                    print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
             self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath)
@@ -215,7 +229,7 @@ class Application(CommonApplication):
         if artifactFileName == None:
             raise ErrorWithDescription('Missing artifact file name in configuration')
         
-        self.generateRootMakeFiles(sourcesDict, outputFolder, artifactFileName)
+        self.generateRootMakeFiles(sourcesDict, outputFolder, outputSubFolder, artifactFileName)
             
         return
 
@@ -226,9 +240,9 @@ class Application(CommonApplication):
         
         if self.verbosity > 0:
             if not os.path.isfile(subdirAbsolutePath):
-                print('Writing file \'{0}\''.format(subdirAbsolutePath))
+                print('Write file \'{0}\''.format(subdirAbsolutePath))
             else:
-                print('Overwriting file \'{0}\''.format(subdirAbsolutePath))
+                print('Overwrite file \'{0}\''.format(subdirAbsolutePath))
 
         f = open(subdirAbsolutePath, 'w')
         
@@ -378,15 +392,15 @@ class Application(CommonApplication):
         return path.replace(' ', '\\ ')
         
 
-    def generateRootMakeFiles(self, sourcesDict, outputFolder, artifactFileName):
+    def generateRootMakeFiles(self, sourcesDict, outputFolder, outputSubFolder, artifactFileName):
         
-        makefileAbsolutePath = os.path.join(outputFolder, 'makefile')
+        makefileAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'makefile')
         
         if self.verbosity > 0:
             if not os.path.isfile(makefileAbsolutePath):
-                print('Writing file \'{0}\''.format(makefileAbsolutePath))
+                print('Write file \'{0}\''.format(makefileAbsolutePath))
             else:
-                print('Overwriting file \'{0}\''.format(makefileAbsolutePath))
+                print('Overwrite file \'{0}\''.format(makefileAbsolutePath))
 
         f = open(makefileAbsolutePath, 'w')
         
@@ -458,13 +472,13 @@ class Application(CommonApplication):
 
         # ---------------------------------------------------------------------
         
-        objectsMkAbsolutePath = os.path.join(outputFolder, 'objects.mk')
+        objectsMkAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'objects.mk')
         
         if self.verbosity > 0:
             if not os.path.isfile(objectsMkAbsolutePath):
-                print('Writing file \'{0}\''.format(objectsMkAbsolutePath))
+                print('Write file \'{0}\''.format(objectsMkAbsolutePath))
             else:
-                print('Overwriting file \'{0}\''.format(objectsMkAbsolutePath))
+                print('Overwrite file \'{0}\''.format(objectsMkAbsolutePath))
 
         f = open(objectsMkAbsolutePath, 'w')
         
@@ -480,13 +494,13 @@ class Application(CommonApplication):
         
         # ---------------------------------------------------------------------
         
-        sourcesMkAbsolutePath = os.path.join(outputFolder, 'sources.mk')
+        sourcesMkAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'sources.mk')
         
         if self.verbosity > 0:
             if not os.path.isfile(sourcesMkAbsolutePath):
-                print('Writing file \'{0}\''.format(sourcesMkAbsolutePath))
+                print('Write file \'{0}\''.format(sourcesMkAbsolutePath))
             else:
-                print('Overwriting file \'{0}\''.format(sourcesMkAbsolutePath))
+                print('Overwrite file \'{0}\''.format(sourcesMkAbsolutePath))
 
         f = open(sourcesMkAbsolutePath, 'w')
         

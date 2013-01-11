@@ -104,6 +104,30 @@ class Configuration(Object):
         
         return None
     
-    
 
-    
+    def getBuildFolderRecursiveWithSubstitutions(self):
+        
+        if self._buildFolder == None:            
+            if self._treeParent == None:
+                # end of line, return an empty string, not None
+                return ''
+            # return parent value
+            return self._treeParent.getBuildFolderRecursiveWithSubstitutions()
+        
+        # check if the macro is present
+        if self._buildFolder.find('$(PARENT)') == -1:
+            # if not, return it as is
+            return self._buildFolder
+
+        # must perform substitution
+        newStr = ''
+        if self._treeParent != None:
+            # get parent value
+            newStr = self._treeParent.getBuildFolderRecursiveWithSubstitutions()
+            
+        # string substitution
+        return self._buildFolder.replace('$(PARENT)', newStr)
+
+        
+        
+        
