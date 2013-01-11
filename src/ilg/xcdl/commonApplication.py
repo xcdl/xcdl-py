@@ -288,10 +288,7 @@ class CommonApplication(object):
         scriptsList = node.getIncludesList()
         if scriptsList != None:
                 
-            baseRelativePath = node.getBasePath()
-            (scriptAbsoluteFolder, _) = os.path.split(scriptAbsolutePath)
-            baseAbsolutePath = os.path.abspath(os.path.join(
-                                        scriptAbsoluteFolder, baseRelativePath))
+            (baseAbsolutePath, _) = os.path.split(scriptAbsolutePath)
                                 
             for child in scriptsList:
                     
@@ -677,6 +674,8 @@ class CommonApplication(object):
         # iterate through all children
         for child in children:           
             self.dumpSourceFilesRecursive(child, depth + 1)            
+            
+        return
     
 
     def buildSourcesDict(self, packagesTreesList):
@@ -776,3 +775,35 @@ class CommonApplication(object):
         for child in children:           
             self.buildSourcesDictRecursive(child, depth + 1, sourcesDict)            
         
+        return
+    
+    
+    def processInitialIsEnabled(self, packagesTreesList):
+    
+        for tree in packagesTreesList:
+            self.processInitialIsEnabledRecursive(tree, 0)
+            
+        return
+
+
+    def processInitialIsEnabledRecursive(self, node, depth):
+
+        initialIsEnabled = node.getInitialIsEnabled()
+        if initialIsEnabled != None:
+            evaluatedValue = eval(initialIsEnabled)
+            
+            if evaluatedValue:
+                node.setIsEnabled()
+                
+                if self.verbosity > 1:
+                    print 'node \'{0}\' initially enabled'.format(node.getName())
+            
+        children = node.getTreeChildrenList()
+        if children == None:
+            return
+    
+        # iterate through all children
+        for child in children:           
+            self.processInitialIsEnabledRecursive(child, depth + 1)            
+
+        return

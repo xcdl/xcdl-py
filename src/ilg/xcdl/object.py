@@ -276,6 +276,11 @@ class Object(object):
         if not self.isLoaded():
             return False
 
+        # nodes need to have their parents enabled to be enabled
+        if self._treeParent != None:
+            if not self._treeParent.isEnabled():
+                return False
+            
         return self._isEnabled
 
 
@@ -328,7 +333,12 @@ class Object(object):
 
         if self._defaultValue != None:
             if isinstance(self._defaultValue, basestring):
-                return eval(self._defaultValue)
+                #return eval(self._defaultValue)
+                try:
+                    evaluatedValue = eval(self._defaultValue)
+                except:
+                    evaluatedValue = self._defaultValue
+                return evaluatedValue
             else:
                 return self._defaultValue
     

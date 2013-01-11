@@ -158,6 +158,8 @@ class Application(CommonApplication):
         configNode = self.loadConfiguration(configTreesList, 
                                             self.desiredConfigurationId)
 
+        self.processInitialIsEnabled(packagesTreesList)
+
         if self.verbosity > 1:
             print
             self.dumpTree(packagesTreesList, True)
@@ -192,11 +194,26 @@ class Application(CommonApplication):
 
             (folderAbsolutePath,_) = os.path.split(fileAbsolutePath)
             if not os.path.isdir(folderAbsolutePath):
+                if self.verbosity > 0:
+                    print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
+            if self.verbosity > 0:
+                if not os.path.isfile(fileAbsolutePath):
+                    print('Write file \'{0}\''.format(fileAbsolutePath))
+                else:
+                    print('Overwrite file \'{0}\''.format(fileAbsolutePath))
+
             # truncate existing files
             textFile = open(fileAbsolutePath, 'w')
-            textFile.write('// {0}\n'.format(CommonApplication.getDoNotEditMessage()))
+            
+            doNotEditMessage = CommonApplication.getDoNotEditMessage()
+            
+            textFile.write('//{0}//\n'.format('/'*(len(doNotEditMessage)+2)))
+            textFile.write('// {0} //\n'.format(doNotEditMessage))
+            textFile.write('//{0}//\n'.format('/'*(len(doNotEditMessage)+2)))
+            textFile.write('\n')
+            
             headerLines = headersDict[fileRelativePath]
             for headerLine in headerLines:
                 if self.verbosity > 1:
@@ -223,7 +240,7 @@ class Application(CommonApplication):
                     print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
-            self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder)
+            self.generateSubdirMk(folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder, outputSubFolder)
         
         artifactFileName = configNode.getArtifactFileNameRecursive()
         if artifactFileName == None:
@@ -234,7 +251,7 @@ class Application(CommonApplication):
         return
 
     
-    def generateSubdirMk(self, folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder):
+    def generateSubdirMk(self, folderAbsolutePath, sourcesDict, folderRelativePath, outputFolder, outputSubFolder):
         
         subdirAbsolutePath = os.path.join(folderAbsolutePath, 'subdir.mk')
         
@@ -311,8 +328,9 @@ class Application(CommonApplication):
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
                 sourceAbsolutePath = e['sourceAbsolutePath']
                 f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
-                f.write('\t@echo \'XCDL Building file: $<\'\n')
+                f.write('\t@echo \'Building XCDL file: $<\'\n')
                 
+                    
                 fType = e['type']
                 if fType == '.cpp':
                     toolName = 'clang++'
@@ -321,12 +339,16 @@ class Application(CommonApplication):
                     toolName = 'clang'
                     toolName = 'LLVM Clang'
                 
+                if self.verbosity > 0:
+                    print 'Will compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
+
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
                 f.write('\t{0}'.format(toolName))
                 f.write(' -DDEBUG=1')
                 
-                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete, outputFolder)
+                buildFolderAbsolutePath=os.path.abspath(os.path.join(outputFolder, outputSubFolder))
+                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete, buildFolderAbsolutePath)
                 for includeAbsolutePath in includeAbsolutePathList:
                     f.write(' -I"{0}"'.format(includeAbsolutePath))
                     
@@ -343,7 +365,7 @@ class Application(CommonApplication):
         return
    
    
-    def computeIncludeAbsolutePathList(self, treeNode, fileNameComplete, buildFolder):
+    def computeIncludeAbsolutePathList(self, treeNode, fileNameComplete, buildFolderAbsolutePath):
         
         localList = []
         if treeNode == None:
@@ -360,7 +382,7 @@ class Application(CommonApplication):
                         repoFolder = treeNode.getTreeRoot().getRepositoryFolderAbsolutePath()
                         path = path.replace('$(REPO_DIR)', repoFolder)
                     elif path.find('$(BUILD_DIR)') != -1:
-                        path = path.replace('$(BUILD_DIR)', buildFolder)
+                        path = path.replace('$(BUILD_DIR)', buildFolderAbsolutePath)
 
                     # add replaced or original path o response list
                     localList.append(path)
@@ -452,14 +474,19 @@ class Application(CommonApplication):
         f.write('# Add inputs and outputs from these tool invocations to the build variables\n')
         f.write('\n')
 
+        toolDesc = 'LLVM C++ linker'
+        
         f.write('# Tool invocations\n')
         f.write('{0}: $(BCS) $(USER_OBJS)\n'.format(artifactFileName))
-        f.write('\t@echo \'XCDL Building target: $@\'\n')
-        f.write('\t@echo \'Invoking: {0}\'\n'.format('LLVM C++ linker'))
+        f.write('\t@echo \'Building XCDL target: $@\'\n')
+        f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
         f.write('\t{0} -native -o "{1}" $(BCS) $(USER_OBJS) $(LIBS)\n'.format('clang++', artifactFileName))
         f.write('\t@echo \'Finishing building target: $@\'\n')
         f.write('\t@echo \' \'\n')
         f.write('\n')
+
+        if self.verbosity > 0:
+            print 'Will link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
 
         f.write('# Other Targets\n')
         f.write('clean:\n')

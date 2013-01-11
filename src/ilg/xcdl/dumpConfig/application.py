@@ -133,6 +133,9 @@ class Application(CommonApplication):
             self.loadConfiguration(configTreesList, self.desiredConfigurationId)
 
             print
+            self.processInitialIsEnabled(packagesTreesList)
+            
+            print
             self.dumpTree(packagesTreesList, True)
                   
             print
