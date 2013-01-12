@@ -78,6 +78,7 @@ class Application(CommonApplication):
             self.usage()
             return 2
         
+        retval = 0
         try:
             if len(args) > 0:
                 print 'unused arguments: ', args
@@ -109,13 +110,14 @@ class Application(CommonApplication):
             
         except ErrorWithDescription as err:
             print err
+            retval = 1
     
         finally:
             if self.verbosity > 0:
                 print   
                 print '[done]'
             
-        return 0        
+        return retval        
 
 
     def validate(self):
@@ -139,7 +141,8 @@ class Application(CommonApplication):
         
         if self.verbosity > 0:
             print
-            print "* Create the build folders with distributed GNU Make files *"
+            print '* The configMakefiles tool (part of the XCDL framework)    *'
+            print '* Create the build folders with distributed GNU Make files *'
             print
             if self.verbosity > 1:
                 print 'Verbosity level {0}'.format(self.verbosity)
