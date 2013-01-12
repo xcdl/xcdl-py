@@ -70,11 +70,13 @@ class Object(object):
         # ---------------------------------------------------------------------
             
         key='isConfigurable'
-        self._isConfigurable = None
+        self._isConfigurableExpression = None
         if key in self._kwargs:
-            self._isConfigurable = self._kwargs[key]
+            self._isConfigurableExpression = self._kwargs[key]
             del self._kwargs[key]
 
+        self.isConfigurable = self.getDefaultIsConfigurable()
+        
         key='isEnabled'
         self._initialIsEnabled = None
         if key in self._kwargs:
@@ -103,18 +105,18 @@ class Object(object):
             del self._kwargs[key]
                         
         key='computed'
-        self._computed = None
+        self._computedExpression = None
         if key in self._kwargs:
-            self._computed = self._kwargs[key]
+            self._computedExpression = self._kwargs[key]
             del self._kwargs[key]
 
         key='defaultValue'
-        self._defaultValue = None
-        if self._computed != None:
+        self._defaultValueExpression = None
+        if self._computedExpression != None:
             print 'Node {0} already has a compute, \‘defaultValue\' ignored'.format(self._id)
         else:
             if key in self._kwargs:
-                self._defaultValue = self._kwargs[key]
+                self._defaultValueExpression = self._kwargs[key]
                 del self._kwargs[key]
 
         key='legalValues'
@@ -294,6 +296,11 @@ class Object(object):
         # most objects start as disabled (packages and interfaces are exceptions)
         return False
     
+
+    def getDefaultIsConfigurable(self):
+        
+        # most objects start as configurable (interfaces are exceptions)
+        return True
     
     # return True if the value was set
     def setIsEnabled(self, isEnabled = True):
@@ -305,6 +312,22 @@ class Object(object):
         return True
 
 
+    # return 1 if the value was changed
+    def setIsEnabledWithCount(self, isEnabled = True):
+
+        if not self.isLoaded():
+            return 0
+        
+        count = 1 if (self._isEnabled != isEnabled) else 0
+        self._isEnabled = isEnabled
+        return count
+
+
+    def getValueType(self):
+        
+        return self._valueType
+
+    
     def getValueTypeWithDefault(self):
         
         if self._valueType != None:
@@ -325,22 +348,22 @@ class Object(object):
             else:
                 return self._value
     
-        if self._computed != None:
-            if isinstance(self._computed, basestring):
-                return eval(self._computed)
+        if self._computedExpression != None:
+            if isinstance(self._computedExpression, basestring):
+                return eval(self._computedExpression)
             else:
-                return self._computed
+                return self._computedExpression
 
-        if self._defaultValue != None:
-            if isinstance(self._defaultValue, basestring):
-                #return eval(self._defaultValue)
+        if self._defaultValueExpression != None:
+            if isinstance(self._defaultValueExpression, basestring):
+                #return eval(self._defaultValueExpression)
                 try:
-                    evaluatedValue = eval(self._defaultValue)
+                    evaluatedValue = eval(self._defaultValueExpression)
                 except:
-                    evaluatedValue = self._defaultValue
+                    evaluatedValue = self._defaultValueExpression
                 return evaluatedValue
             else:
-                return self._defaultValue
+                return self._defaultValueExpression
     
         # otherwise active objects have a value of 1/True
         return 1
@@ -539,3 +562,21 @@ class Object(object):
         valueWithType = self.getValueWithType()
 
         return formatString.format(valueWithType)
+    
+    
+    def getRequiresList(self):
+        
+        return self._requiresList
+    
+    
+    def isConfigurableEvaluated(self):
+        
+        if self._isConfigurableExpression == None:
+            return self.getDefaultIsConfigurable()
+        
+        if isinstance(self._isConfigurableExpression, basestring):            
+            return eval(self._isConfigurableExpression)
+        else:
+            return self._isConfigurableExpression
+        
+    

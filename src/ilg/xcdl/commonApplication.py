@@ -18,6 +18,7 @@ from ilg.xcdl.option import Option  # @UnusedImport
 from ilg.xcdl.packageFolder import PackageFolder  # @UnusedImport
 
 
+
 class CommonApplication(object):
 
     # static member
@@ -36,15 +37,60 @@ class CommonApplication(object):
         
         return CommonApplication._doNotEditMessage
 
+    # initialise the dictionary where all objects will be stored
+    allObjectsByIdDict = {}
+    allObjectsByNameDict = {}
 
+    @staticmethod    
+    def isObjectById(sid):
+        
+        return sid in CommonApplication.allObjectsByIdDict
+
+    @staticmethod    
+    def getObjectById(sid):
+        
+        return CommonApplication.allObjectsByIdDict[sid]
+
+    @staticmethod    
+    def isObjectByName(name):
+        
+        return name in CommonApplication.allObjectsByNameDict
+
+    @staticmethod    
+    def getObjectByName(name):
+        
+        return CommonApplication.allObjectsByNameDict[name]
+
+    @staticmethod    
+    def insertObject(node):
+        
+        # insert node to both dictionaries
+        CommonApplication.allObjectsByIdDict[node.getId()] = node
+        CommonApplication.allObjectsByNameDict[node.getName()] = node
+        
+        return
+    
+    
+    verbosity = 0
+
+    @staticmethod    
+    def getVerbosity():
+        
+        return CommonApplication.verbosity
+    
+
+    @staticmethod    
+    def setVerbosity(verbosity):
+        
+        CommonApplication.verbosity = verbosity
+    
+    
+    
     def __init__(self, *argv):
         
         self.argv = argv
         
         self.verbosity = 0
-
-        # initialise the dictionary where all objects will be stored
-        self.allObjectsDict = {}
 
         self.defaultScripts = ['meta/xcdl.py']
         
@@ -53,29 +99,31 @@ class CommonApplication(object):
         return
     
     
-    def processPackagesTrees(self, packagesFilePathList):
+    def processPackagesTrees(self, packagesFilePathList, minVerbosity):
         
         # build a list of trees, for all given packages
         packagesTreesList = []
                 
         for filePath in packagesFilePathList:
             
-            packsList = self.processPackageTree(filePath)
+            packsList = self.processPackageTree(filePath, minVerbosity)
             if packsList != None:
                 packagesTreesList.extend(packsList)
         
         return packagesTreesList
     
 
-    def processPackageTree(self, packagePath):
+    def processPackageTree(self, packagePath, minVerbosity):
                         
         packageAbsolutePath = os.path.abspath(packagePath)
 
         if os.path.isdir(packageAbsolutePath):
-            print 'Process package folder \'{0}\'.'.format(packagePath)
+            if self.verbosity > minVerbosity:
+                print 'Process package folder \'{0}\'...'.format(packagePath)
             rootList = self.processFolderRecursive(None, packageAbsolutePath)
         elif os.path.isfile(packagePath):
-            print 'Process package file \'{0}\'.'.format(packagePath)
+            if self.verbosity > minVerbosity:
+                print 'Process package file \'{0}\'....'.format(packagePath)
             # process the given script and recurse
             rootList = self.processScript(None, packageAbsolutePath)
         else:
@@ -83,18 +131,26 @@ class CommonApplication(object):
         
         for node in rootList:
             node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
+            if self.verbosity > 0:
+                print '- package \'{0}\' processed'.format(node.getName())
                         
         return rootList
 
 
-    def processConfigFile(self, configFilePath):
+    def processConfigFile(self, configFilePath, minVerbosity):
         
-        print        
-        print 'Process configuration file \'{0}\'.'.format(configFilePath)
+        if self.verbosity > minVerbosity:
+            print        
+            print 'Process configuration file \'{0}\'...'.format(configFilePath)
         configFileAbsolutePath = os.path.abspath(self.configFilePath)
         
         # process the given script and recurse
         rootList = self.processScript(None, configFileAbsolutePath, None)
+
+        for node in rootList:
+            if self.verbosity > 0:
+                print '- configuration \'{0}\' processed'.format(node.getName())
+
         return rootList
     
     
@@ -234,37 +290,49 @@ class CommonApplication(object):
     
     def processNode(self, node, parent, scriptAbsolutePath, packageLocation):
           
-        # check if the name was already used
-        if node.getId() in self.allObjectsDict:
+        # check if the id was already used
+        if  CommonApplication.isObjectById(node.getId()):
                 
-            oldObject = self.allObjectsDict[node.getId()]
-            oldKind = oldObject.getObjectType()
+            oldObject = CommonApplication.getObjectById(node.getId())
             oldName = oldObject.getName()
             oldDescription = oldObject.getDescription()
             
             if (oldName == node.getName()) and (oldDescription == node.getDescription()):
                 return
             
-            raise ErrorWithDescription('Name {0} \'{1}\' redefined (was {2} \'{3}\''.
-                            format(node.getId(), node.getName(), oldKind, oldName))
+            raise ErrorWithDescription('Id \'{0}\' \'{1}\' redefined (was \'{2}\')'.
+                            format(node.getId(), node.getName(), oldName))
+
+        # check if the name was already used
+        if  CommonApplication.isObjectByName(node.getName()):
+                
+            oldObject = CommonApplication.getObjectByName(node.getName())
+            oldId = oldObject.getId()
+            oldDescription = oldObject.getDescription()
+            
+            if (oldId == node.getId()) and (oldDescription == node.getDescription()):
+                return
+            
+            raise ErrorWithDescription('Name \'{0}\' \'{1}\' redefined (was \'{2}\')'.
+                            format(node.getName(), node.getId(), oldId))
               
         # eventually process local parent
-        parentName = node.getParentId()
-        if parentName != None and parent != None:
-            if parent.getId() != parentName:
+        parentNodeId = node.getParentId()
+        if parentNodeId != None and parent != None:
+            if parent.getId() != parentNodeId:
                 print 'Parent of {0} already is {1}, redefined as {2}, ignored'.format(
-                                node.getId(), parent.getId(), parentName)
-            parentName = None
+                                node.getId(), parent.getId(), parentNodeId)
+            parentNodeId = None
             
-        if parentName != None:
+        if parentNodeId != None:
             
             # compute parent object from parent name
-            if parentName not in self.allObjectsDict:
+            if  not CommonApplication.isObjectById(parentNodeId):
                 # TODO: check if possible to use a deferred list
                 raise ErrorWithDescription('Parent {0} not defined'.
-                                               format(parentName))
+                                               format(parentNodeId))
                     
-            crtParent = self.allObjectsDict[parentName]
+            crtParent = CommonApplication.getObjectById(parentNodeId)
         else:
             crtParent = parent
 
@@ -282,7 +350,7 @@ class CommonApplication(object):
             node.setPackageLocation(packageLocation)
             
         # store current object in the global dictionary    
-        self.allObjectsDict[node.getId()] = node
+        CommonApplication.insertObject(node)
         
         # process inner scripts        
         scriptsList = node.getIncludesList()
@@ -333,6 +401,8 @@ class CommonApplication(object):
         kind = ' ({0}'.format(node.getObjectType())
         if node.getCategory() != None:
             kind += ',{0}'.format(node.getCategory())
+        if node.getValueType() != None:
+            kind += ',{0}'.format(node.getValueType())
         kind += ')'
         
         kind += (' +E' if node.isEnabled() else ' -E')
@@ -427,21 +497,19 @@ class CommonApplication(object):
         return
 
     
-    def loadConfiguration(self, configTreesList, sid):
+    def loadConfiguration(self, configTreesList, sid, minVerbosity):
         
-        if self.verbosity > 1:
-            print 'Load configuration id=\'{0}\''.format(sid)
-            print
-        
-        if sid not in self.allObjectsDict:
-            print 'Missing id, cancelled'
+        if not CommonApplication.isObjectById(sid):
+            print 'Missing id=\'{0}\', cancelled'.format(sid)
             return
         
-        configNode = self.allObjectsDict[sid]
-        print 'Load configuration node \'{0}\'.'.format(configNode.getName())
+        configNode = CommonApplication.getObjectById(sid)
+        if self.verbosity > minVerbosity:
+            print 'Load configuration node \'{0}\'...'.format(configNode.getName())
         
-        updated = self.loadConfigNode(configNode, 0)
-        print '{0} nodes loaded.'.format(updated)
+        self.loadConfigNode(configNode, 0)
+        #updated = self.loadConfigNode(configNode, 0)
+        #print '- {0} nodes loaded'.format(updated)
 
         return configNode
     
@@ -473,12 +541,12 @@ class CommonApplication(object):
                 
     def loadPackageTreeNode(self, treeNodeId, depth):
 
-        if treeNodeId not in self.allObjectsDict:
+        if  not  CommonApplication.isObjectById(treeNodeId):
             raise ErrorWithDescription('Missing node to load {0}'.format(treeNodeId))
         
         indent = self.indent
 
-        treeNode = self.allObjectsDict[treeNodeId]
+        treeNode = CommonApplication.getObjectById(treeNodeId)
         if treeNode.getObjectType() == 'Configuration':
             updated = self.loadConfigNode(treeNode, depth+1)
             return updated
@@ -488,7 +556,9 @@ class CommonApplication(object):
             updated = 0
             return updated
         
-        if self.verbosity > 1:
+        if self.verbosity == 1:
+            print '- load \'{0}\' and parents'.format(treePackageNode.getName())
+        elif self.verbosity > 1:
             print '{0}load {1}'.format(indent * depth, treeNodeId)
             
         updated = treePackageNode.setIsLoadedRecursive()
@@ -505,13 +575,10 @@ class CommonApplication(object):
         
         print "The preprocessor definitions:"
         
-        print
-        #for tree in packagesTreesList:
-        #    self.dumpPreprocessorDefinitionsRecursive(tree, 0)
-        
         headersDict = self.buildHeadersDict(packagesTreesList)
         for key in headersDict.iterkeys():
             headerLines = headersDict[key]
+            print
             print key
             for headerLine in headerLines:
                 print headerLine
@@ -519,30 +586,30 @@ class CommonApplication(object):
         return
     
     
-    def dumpPreprocessorDefinitionsRecursive(self, node, depth):
-
-        if not node.isLoaded():
-            return
-        
-        headerLineAndFileName = node.getHeaderLineAndFileName()
-        if headerLineAndFileName != None:
-            
-            (headerDefinition, headerFile) = headerLineAndFileName
-            
-            if self.verbosity:
-                print 'process {0}'.format(node.getId())
-
-            print 'file: \'{0}\''.format(headerFile)
-            print headerDefinition
-            print
-             
-        children = node.getTreeChildrenList()
-        if children == None:
-            return
-        
-        # iterate through all children
-        for child in children:           
-            self.dumpPreprocessorDefinitionsRecursive(child, depth + 1)            
+#    def dumpPreprocessorDefinitionsRecursive(self, node, depth):
+#
+#        if not node.isLoaded():
+#            return
+#        
+#        headerLineAndFileName = node.getHeaderLineAndFileName()
+#        if headerLineAndFileName != None:
+#            
+#            (headerDefinition, headerFile) = headerLineAndFileName
+#            
+#            if self.verbosity:
+#                print 'process {0}'.format(node.getId())
+#
+#            print 'file: \'{0}\''.format(headerFile)
+#            print headerDefinition
+#            print
+#             
+#        children = node.getTreeChildrenList()
+#        if children == None:
+#            return
+#        
+#        # iterate through all children
+#        for child in children:           
+#            self.dumpPreprocessorDefinitionsRecursive(child, depth + 1)            
 
 
     def buildHeadersDict(self, packagesTreesList):
@@ -591,91 +658,88 @@ class CommonApplication(object):
         
         print "The source files to compile:"
         
-        print
-        #for tree in packagesTreesList:
-        #    self.dumpSourceFilesRecursive(tree, 0)
-        
         sourcesDict = self.buildSourcesDict(packagesTreesList)
         for key in sourcesDict.iterkeys():
             sources = sourcesDict[key]
+            print
             print key
             for source in sources:
-                print source
+                print '   source {0}, from node \'{1}\''.format(source['fileName'], source['repoNode'].getName())
             
         return
 
 
-    def dumpSourceFilesRecursive(self, node, depth):
-
-        if not node.isLoaded():
-            return
-        
-        if node.isActive():
-            
-            sourceFiles = node.getSourceFilesList()
-            if sourceFiles != None:
-            
-                if self.verbosity:
-                    print 'process {0}'.format(node.getId())
-
-                packageFolder = node.getPackageLocation().getFolderAbsolutePath()
-                #if self.verbosity:
-                #    print 'package folder: \'{0}\''.format(packageFolder)
-
-                treeRoot = node.getTreeRoot()
-                buildSubFolder = treeRoot.getBuildSubFolderWithDefault()
-                #if self.verbosity:
-                #    print 'build subfolder: \'{0}\''.format(buildSubFolder)
-                
-                rootPackageFolder = treeRoot.getPackageLocation().getFolderAbsolutePath()
-                #if self.verbosity:
-                #    print 'root package folder: \'{0}\''.format(rootPackageFolder)
-                
-                sourcesPathsList = node.getSourcePathsListRecursive()
-                if sourcesPathsList == None:
-                    sourcesPathsList = CommonApplication.getSourcePathsListDefault()
-                
-                      
-                for sourceFile in sourceFiles:
-                    print 'source file: \'{0}\''.format(sourceFile)
-
-                    foundSourcePath = None
-                    for sourcePath in sourcesPathsList:
-                        sourceAbsolutePath = os.path.join(packageFolder, sourcePath, sourceFile)
-                        if os.path.isfile(sourceAbsolutePath):
-                            print 'source file path: \'{0}\''.format(sourceAbsolutePath)
-                            foundSourcePath = sourcePath
-                            break
-                        
-                    if foundSourcePath == None:
-                        print 'not found'
-                        continue
-                    
-                    if not sourceAbsolutePath.startswith(rootPackageFolder):
-                        print 'paths do not match'
-                        continue
-                    
-                    subPath = sourceAbsolutePath[len(rootPackageFolder)+1:]
-                    #print subPath
-                    subPathList = subPath.split(os.sep)
-                    #print subPathList
-                    
-                    buildPath = []
-                    buildPath.append(buildSubFolder)
-                    buildPath.extend(subPathList[:-1])
-                    print 'build path: {0}'.format(os.sep.join(buildPath))
-                    
-                print
-             
-        children = node.getTreeChildrenList()
-        if children == None:
-            return
-        
-        # iterate through all children
-        for child in children:           
-            self.dumpSourceFilesRecursive(child, depth + 1)            
-            
-        return
+#    def dumpSourceFilesRecursive(self, node, depth):
+#
+#        if not node.isLoaded():
+#            return
+#        
+#        if node.isActive():
+#            
+#            sourceFiles = node.getSourceFilesList()
+#            if sourceFiles != None:
+#            
+#                if self.verbosity:
+#                    print 'process {0}'.format(node.getId())
+#
+#                packageFolder = node.getPackageLocation().getFolderAbsolutePath()
+#                #if self.verbosity:
+#                #    print 'package folder: \'{0}\''.format(packageFolder)
+#
+#                treeRoot = node.getTreeRoot()
+#                buildSubFolder = treeRoot.getBuildSubFolderWithDefault()
+#                #if self.verbosity:
+#                #    print 'build subfolder: \'{0}\''.format(buildSubFolder)
+#                
+#                rootPackageFolder = treeRoot.getPackageLocation().getFolderAbsolutePath()
+#                #if self.verbosity:
+#                #    print 'root package folder: \'{0}\''.format(rootPackageFolder)
+#                
+#                sourcesPathsList = node.getSourcePathsListRecursive()
+#                if sourcesPathsList == None:
+#                    sourcesPathsList = CommonApplication.getSourcePathsListDefault()
+#                
+#                      
+#                for sourceFile in sourceFiles:
+#                    print 'source file: \'{0}\''.format(sourceFile)
+#
+#                    foundSourcePath = None
+#                    for sourcePath in sourcesPathsList:
+#                        sourceAbsolutePath = os.path.join(packageFolder, sourcePath, sourceFile)
+#                        if os.path.isfile(sourceAbsolutePath):
+#                            print 'source file path: \'{0}\''.format(sourceAbsolutePath)
+#                            foundSourcePath = sourcePath
+#                            break
+#                        
+#                    if foundSourcePath == None:
+#                        print 'not found'
+#                        continue
+#                    
+#                    if not sourceAbsolutePath.startswith(rootPackageFolder):
+#                        print 'paths do not match'
+#                        continue
+#                    
+#                    subPath = sourceAbsolutePath[len(rootPackageFolder)+1:]
+#                    #print subPath
+#                    subPathList = subPath.split(os.sep)
+#                    #print subPathList
+#                    
+#                    buildPath = []
+#                    buildPath.append(buildSubFolder)
+#                    buildPath.extend(subPathList[:-1])
+#                    print 'build path: {0}'.format(os.sep.join(buildPath))
+#                    
+#                print
+#             
+#        children = node.getTreeChildrenList()
+#        if children == None:
+#            return
+#        
+#        # iterate through all children
+#        for child in children:           
+#            self.dumpSourceFilesRecursive(child, depth + 1)            
+#            
+#        return
     
 
     def buildSourcesDict(self, packagesTreesList):
@@ -780,30 +844,147 @@ class CommonApplication(object):
     
     def processInitialIsEnabled(self, packagesTreesList):
     
-        for tree in packagesTreesList:
-            self.processInitialIsEnabledRecursive(tree, 0)
+        while True:
+            count = 0
+            for tree in packagesTreesList:
+                count += self.processInitialIsEnabledRecursive(tree, 0)
+                            
+            if count == 0:
+                break
             
         return
 
 
     def processInitialIsEnabledRecursive(self, node, depth):
 
+        count = 0
         initialIsEnabled = node.getInitialIsEnabled()
         if initialIsEnabled != None:
             evaluatedValue = eval(initialIsEnabled)
             
-            if evaluatedValue:
-                node.setIsEnabled()
+            count += node.setIsEnabledWithCount(evaluatedValue)
                 
-                if self.verbosity > 1:
-                    print 'node \'{0}\' initially enabled'.format(node.getName())
+            if count > 0 and self.verbosity > 0:
+                status = 'enabled' if evaluatedValue else 'disabled'
+                print '- node \'{0}\' initially {1}'.format(node.getName(), status)
             
         children = node.getTreeChildrenList()
         if children == None:
-            return
+            return count
     
         # iterate through all children
         for child in children:           
-            self.processInitialIsEnabledRecursive(child, depth + 1)            
+            count += self.processInitialIsEnabledRecursive(child, depth + 1)            
 
+        return count
+
+
+    def processRequires(self, packagesTreesList):
+    
+        while True:
+            clearGlobalCount()
+            for tree in packagesTreesList:
+                addToGlobalCount(self.processRequiresRecursive(tree, 0))
+                            
+            if getGlobalCount() == 0:
+                break
+            
         return
+
+
+    def processRequiresRecursive(self, node, depth):
+
+        count = 0
+        
+        requiresList = node.getRequiresList()
+        if requiresList != None:
+            
+            for requires in requiresList:
+                if not eval(requires):
+                    print '- requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+            
+        children = node.getTreeChildrenList()
+        if children == None:
+            return count
+    
+        # iterate through all children
+        for child in children:           
+            count += self.processRequiresRecursive(child, depth + 1)            
+
+        return count
+
+
+# ----- functions used in xcdl expressions ------------------------------------
+
+globalCount = 0
+
+def clearGlobalCount():
+    
+    global globalCount
+    globalCount = 0
+    return
+
+
+def getGlobalCount():
+    
+    global globalCount
+    return globalCount
+
+def addToGlobalCount(value):
+
+    global globalCount
+    globalCount += value
+    return
+    
+    
+def enable(sid):
+        
+    if CommonApplication.getVerbosity() > 1:
+        print 'enable("{0}")'.format(sid)
+        
+    if not CommonApplication.isObjectById(sid):
+        print 'Node not found, enable("{0}") ignored'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+    if not node.isLoaded():
+        print 'Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid)
+        return False
+
+    if not node.isConfigurableEvaluated():
+        print 'Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid)
+        return False
+        
+    count = node.setIsEnabledWithCount()
+
+    if count > 0 and CommonApplication.getVerbosity() > 0:
+        print '- node \'{0}\' enabled'.format(node.getName())
+        
+    addToGlobalCount(count)
+    
+    return True
+
+
+def disable(sid):
+        
+    if not CommonApplication.isObjectById(sid):
+        print 'Node not found, disable("{0}") ignored'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+    if not node.isLoaded():
+        print 'Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid)
+        return False
+
+    if not node.isConfigurableEvaluated():
+        print 'Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid)
+        return False
+        
+    count = node.setIsEnabledWithCount(False)
+
+    if count > 0 and CommonApplication.getVerbosity() > 0:
+        print '- node \'{0}\' disabled'.format(node.getName())
+        
+    addToGlobalCount(count)
+    
+    return True

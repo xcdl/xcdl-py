@@ -104,6 +104,7 @@ class Application(CommonApplication):
                 else:
                     assert False, 'option not handled'
 
+            CommonApplication.setVerbosity(self.verbosity)
             self.process()
             
         except ErrorWithDescription as err:
@@ -138,14 +139,17 @@ class Application(CommonApplication):
         
         if self.verbosity > 0:
             print
-            print "Create the build folders with distributed makefiles."
+            print "* Create the build folders with distributed GNU Make files *"
             print
+            if self.verbosity > 1:
+                print 'Verbosity level {0}'.format(self.verbosity)
+                print
         
         self.validate()
         
-        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList)
+        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList, 0)
 
-        configTreesList = self.processConfigFile(self.configFilePath)
+        configTreesList = self.processConfigFile(self.configFilePath, 0)
 
         if self.verbosity > 1:
             print
@@ -156,9 +160,17 @@ class Application(CommonApplication):
 
         print
         configNode = self.loadConfiguration(configTreesList, 
-                                            self.desiredConfigurationId)
+                                            self.desiredConfigurationId, 0)
 
+        if self.verbosity > 0:
+            print
+            print 'Process initial \'isEnabled\' properties...'
         self.processInitialIsEnabled(packagesTreesList)
+
+        if self.verbosity > 0:
+            print
+            print 'Process \'requires\' properties...'
+        self.processRequires(packagesTreesList)
 
         if self.verbosity > 1:
             print
@@ -167,17 +179,20 @@ class Application(CommonApplication):
         if not os.path.isdir(self.outputFolder):
             os.makedirs(self.outputFolder)
                                        
-        if self.verbosity:
-            print
-
         outputSubFolder = configNode.getBuildFolderRecursiveWithSubstitutions()
         if self.doLinearise:
             outputSubFolder = outputSubFolder.replace(os.sep, '_')
         
         #print outputSubFolder
         
+        if self.verbosity > 0:
+            print
+            print 'Generate header files...'
         self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder, outputSubFolder)
         
+        if self.verbosity > 0:
+            print
+            print 'Generate Make files...'
         self.generateAllMakeFiles(packagesTreesList, configNode, self.outputFolder, outputSubFolder)
         
         return
@@ -194,7 +209,7 @@ class Application(CommonApplication):
 
             (folderAbsolutePath,_) = os.path.split(fileAbsolutePath)
             if not os.path.isdir(folderAbsolutePath):
-                if self.verbosity > 0:
+                if self.verbosity > 1:
                     print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
@@ -216,8 +231,8 @@ class Application(CommonApplication):
             
             headerLines = headersDict[fileRelativePath]
             for headerLine in headerLines:
-                if self.verbosity > 1:
-                    print headerLine
+                if self.verbosity > 0:
+                    print '- {0}'.format(headerLine)
                 textFile.write(headerLine)
                 textFile.write('\n')
                 
@@ -236,7 +251,7 @@ class Application(CommonApplication):
             
             folderAbsolutePath = os.path.join(outputFolder, outputSubFolder, folderRelativePath)
             if not os.path.isdir(folderAbsolutePath):
-                if self.verbosity > 0:
+                if self.verbosity > 1:
                     print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
@@ -328,7 +343,7 @@ class Application(CommonApplication):
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
                 sourceAbsolutePath = e['sourceAbsolutePath']
                 f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
-                f.write('\t@echo \'Building XCDL file: $<\'\n')
+                f.write('\t@echo \'Compiling XCDL file: $<\'\n')
                 
                     
                 fType = e['type']
@@ -340,7 +355,7 @@ class Application(CommonApplication):
                     toolName = 'LLVM Clang'
                 
                 if self.verbosity > 0:
-                    print 'Will compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
+                    print '- compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
 
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
@@ -356,7 +371,7 @@ class Application(CommonApplication):
                 f.write(' -MMD -MP -o "$@" "$<"')
                 f.write('\n')
                 
-                f.write('\t@echo \'Finished file: $<\'\n')
+                f.write('\t@echo \'Finished compiling file: $<\'\n')
                 f.write('\t@echo \' \'\n')
                 f.write('\n')
                                 
@@ -478,15 +493,15 @@ class Application(CommonApplication):
         
         f.write('# Tool invocations\n')
         f.write('{0}: $(BCS) $(USER_OBJS)\n'.format(artifactFileName))
-        f.write('\t@echo \'Building XCDL target: $@\'\n')
+        f.write('\t@echo \'Linking XCDL target: $@\'\n')
         f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
         f.write('\t{0} -native -o "{1}" $(BCS) $(USER_OBJS) $(LIBS)\n'.format('clang++', artifactFileName))
-        f.write('\t@echo \'Finishing building target: $@\'\n')
+        f.write('\t@echo \'Finished linking target: $@\'\n')
         f.write('\t@echo \' \'\n')
         f.write('\n')
 
         if self.verbosity > 0:
-            print 'Will link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
+            print '- link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
 
         f.write('# Other Targets\n')
         f.write('clean:\n')

@@ -12,3 +12,7 @@ class Option(Object):
         return
     
 
+    def getDefaultIsEnabled(self):
+        
+        # Options start as enabled
+        return True

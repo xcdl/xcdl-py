@@ -81,13 +81,14 @@ class Application(CommonApplication):
                 elif o in ('-i', '--id'):
                     self.desiredConfigurationId = a
                 elif o in ('-v', '--verbose'):
-                    self.verbosity = True
+                    self.verbosity += 1
                 elif o in ('-h', '--help'):
                     self.usage()
                     return 0
                 else:
                     assert False, 'option not handled'
     
+            CommonApplication.setVerbosity(self.verbosity)
             self.process()
             
         except ErrorWithDescription as err:
@@ -113,13 +114,13 @@ class Application(CommonApplication):
         self.validate()
         
         print
-        print "Dump the configuration tree."
+        print "* Dump the configuration trees *"
         print
         
-        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList)
+        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList, -1)
 
         if self.configFilePath != None:
-            configTreesList = self.processConfigFile(self.configFilePath)
+            configTreesList = self.processConfigFile(self.configFilePath, -1)
 
         print
         self.dumpTree(packagesTreesList, False)
@@ -130,10 +131,15 @@ class Application(CommonApplication):
 
         if self.desiredConfigurationId != None:
             print
-            self.loadConfiguration(configTreesList, self.desiredConfigurationId)
+            self.loadConfiguration(configTreesList, self.desiredConfigurationId, -1)
 
             print
+            print 'Process initial \'isEnabled\' properties'
             self.processInitialIsEnabled(packagesTreesList)
+            
+            print
+            print 'Process \'requires\' properties'
+            self.processRequires(packagesTreesList)
             
             print
             self.dumpTree(packagesTreesList, True)
