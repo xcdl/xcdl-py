@@ -119,11 +119,11 @@ class CommonApplication(object):
 
         if os.path.isdir(packageAbsolutePath):
             if self.verbosity > minVerbosity:
-                print 'Process package folder \'{0}\'...'.format(packagePath)
+                print 'Process packages folder \'{0}\'...'.format(packagePath)
             rootList = self.processFolderRecursive(None, packageAbsolutePath)
         elif os.path.isfile(packagePath):
             if self.verbosity > minVerbosity:
-                print 'Process package file \'{0}\'....'.format(packagePath)
+                print 'Process packages file \'{0}\'....'.format(packagePath)
             # process the given script and recurse
             rootList = self.processScript(None, packageAbsolutePath)
         else:
@@ -132,7 +132,7 @@ class CommonApplication(object):
         for node in rootList:
             node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
             if self.verbosity > 0:
-                print '- package \'{0}\' processed'.format(node.getName())
+                print '- package tree \'{0}\' processed'.format(node.getName())
                         
         return rootList
 
@@ -557,7 +557,7 @@ class CommonApplication(object):
             return updated
         
         if self.verbosity == 1:
-            print '- load \'{0}\' and parents'.format(treePackageNode.getName())
+            print '- package \'{0}\' and parents loaded'.format(treePackageNode.getName())
         elif self.verbosity > 1:
             print '{0}load {1}'.format(indent * depth, treeNodeId)
             
@@ -866,7 +866,7 @@ class CommonApplication(object):
                 
             if count > 0 and self.verbosity > 0:
                 status = 'enabled' if evaluatedValue else 'disabled'
-                print '- node \'{0}\' initially {1}'.format(node.getName(), status)
+                print '- {0} \'{1}\' initially {2}'.format(node.getObjectType().lower(), node.getName(), status)
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -958,7 +958,7 @@ def enable(sid):
     count = node.setIsEnabledWithCount()
 
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- node \'{0}\' enabled'.format(node.getName())
+        print '- {0} \'{1}\' enabled'.format(node.getObjectType().lower(), node.getName())
         
     addToGlobalCount(count)
     
@@ -983,7 +983,7 @@ def disable(sid):
     count = node.setIsEnabledWithCount(False)
 
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- node \'{0}\' disabled'.format(node.getName())
+        print '- {0} \'{1}\' disabled'.format(node.getObjectType().lower(), node.getName())
         
     addToGlobalCount(count)
     
