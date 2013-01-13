@@ -154,7 +154,7 @@ class CommonApplication(object):
         for node in rootList:
             node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
             if self.verbosity > 0:
-                print '- {0} \'{1}\' processed'.format(node.getObjectType().lower(), node.getName())
+                print '- {0} \'{1}\' parsed in'.format(node.getObjectType().lower(), node.getName())
                         
         return rootList
 
@@ -173,7 +173,7 @@ class CommonApplication(object):
 
         for node in configTreesList:
             if self.verbosity > 0:
-                print '- configuration \'{0}\' processed'.format(node.getName())
+                print '- configuration \'{0}\' parsed in'.format(node.getName())
 
         repoFolderAbsolutePathList = []
         for repo in localRepositoriesList:
@@ -1062,7 +1062,7 @@ def setValue(sid, value):
     count = node.setValueWithCount(value)
     
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- {0} \'{1}\' set to \'{2}\''.format(node.getObjectType().lower(), node.getName(), value)
+        print '- {0} \'{1}\' set to "{2}"'.format(node.getObjectType().lower(), node.getName(), value)
 
     addToGlobalCount(count)
     

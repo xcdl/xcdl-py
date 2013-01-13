@@ -208,7 +208,7 @@ class Application(CommonApplication):
         
         if self.verbosity > 0:
             print
-            print 'Generate Make files...'
+            print 'Generate GNU Make files...'
         self.generateAllMakeFiles(repositoriesList, configNode, self.outputFolder, outputSubFolder)
         
         return
