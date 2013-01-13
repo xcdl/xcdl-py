@@ -167,13 +167,13 @@ class Application(CommonApplication):
 
         if self.verbosity > 0:
             print
-            print 'Process initial \'isEnabled\' properties...'
+            print 'Process the initial \'isEnabled\' properties...'
         self.processInitialIsEnabled(packagesTreesList)
 
         if self.verbosity > 0:
             print
-            print 'Process \'requires\' properties...'
-        self.processRequires(packagesTreesList)
+            print 'Process the \'requires\' properties...'
+        self.processRequires(packagesTreesList, configNode)
 
         if self.verbosity > 1:
             print

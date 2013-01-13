@@ -877,12 +877,17 @@ class CommonApplication(object):
         return count
 
 
-    def processRequires(self, packagesTreesList):
+    def processRequires(self, packagesTreesList, configNode):
     
         while True:
             clearGlobalCount()
+            
+            # first process the configuration requirements
+            self.processConfigRequiresRecursive(configNode, 0)
+            
+            # than the packages trees
             for tree in packagesTreesList:
-                addToGlobalCount(self.processRequiresRecursive(tree, 0))
+                self.processTreeRequiresRecursive(tree, 0)
                             
             if getGlobalCount() == 0:
                 break
@@ -890,10 +895,8 @@ class CommonApplication(object):
         return
 
 
-    def processRequiresRecursive(self, node, depth):
+    def processTreeRequiresRecursive(self, node, depth):
 
-        count = 0
-        
         requiresList = node.getRequiresList()
         if requiresList != None:
             
@@ -903,14 +906,30 @@ class CommonApplication(object):
             
         children = node.getTreeChildrenList()
         if children == None:
-            return count
+            return 
     
         # iterate through all children
         for child in children:           
-            count += self.processRequiresRecursive(child, depth + 1)            
+            self.processTreeRequiresRecursive(child, depth + 1)            
 
-        return count
+        return
 
+
+    def processConfigRequiresRecursive(self, node, depth):
+
+        requiresList = node.getRequiresList()
+        if requiresList != None:
+            
+            for requires in requiresList:
+                if not eval(requires):
+                    print '- requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+
+        parentNode = node.getTreeParent()
+        if parentNode == None:
+            return
+        
+        return self.processConfigRequiresRecursive(parentNode, depth+1)
+    
 
 # ----- functions used in xcdl expressions ------------------------------------
 
@@ -941,16 +960,16 @@ def enable(sid):
         print 'enable("{0}")'.format(sid)
         
     if not CommonApplication.isObjectById(sid):
-        print 'Node not found, enable("{0}") ignored'.format(sid)
+        print 'ERROR: Node not found, enable("{0}") ignored'.format(sid)
         return False
     
     node = CommonApplication.getObjectById(sid)
     if not node.isLoaded():
-        print 'Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid)
+        print 'ERROR: Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid)
         return False
 
     if not node.isConfigurableEvaluated():
-        print 'Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid)
+        print 'ERROR: Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid)
         return False
         
     count = node.setIsEnabledWithCount()
@@ -966,16 +985,16 @@ def enable(sid):
 def disable(sid):
         
     if not CommonApplication.isObjectById(sid):
-        print 'Node not found, disable("{0}") ignored'.format(sid)
+        print 'ERROR: Node not found, disable("{0}") ignored'.format(sid)
         return False
     
     node = CommonApplication.getObjectById(sid)
     if not node.isLoaded():
-        print 'Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid)
+        print 'ERROR: Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid)
         return False
 
     if not node.isConfigurableEvaluated():
-        print 'Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid)
+        print 'ERROR: Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid)
         return False
         
     count = node.setIsEnabledWithCount(False)
@@ -986,3 +1005,68 @@ def disable(sid):
     addToGlobalCount(count)
     
     return True
+
+
+def isEnabled(sid):
+        
+    if not CommonApplication.isObjectById(sid):
+        print 'ERROR: Node not found, isEnabled("{0}") return False'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+    
+    return node.isEnabled()
+
+
+def isActive(sid):
+        
+    if not CommonApplication.isObjectById(sid):
+        print 'ERROR: Node not found, isActive("{0}") return False'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+    
+    return node.isActive()
+
+
+def valueOf(sid):
+        
+    if not CommonApplication.isObjectById(sid):
+        print 'ERROR: Node not found, valueOf("{0}") return 0'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+    
+    return node.getValueWithType()
+
+
+def setValue(sid, value):
+        
+    if CommonApplication.getVerbosity() > 1:
+        print 'setValue("{0}", \'{1}\')'.format(sid, value)
+
+    if not CommonApplication.isObjectById(sid):
+        print 'ERROR: Node not found, setValue("{0}") ignored'.format(sid)
+        return False
+    
+    node = CommonApplication.getObjectById(sid)
+
+    if not node.isConfigurableEvaluated():
+        print 'ERROR: Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid)
+        return False
+
+    if node.getValueTypeWithDefault() == 'none':
+        print 'ERROR: Node \'{0}\' has valueType=\'none\', setValue("{1}") ignored'.format(node.getName(), sid)
+        return False
+    
+    count = node.setValueWithCount(value)
+    
+    if count > 0 and CommonApplication.getVerbosity() > 0:
+        print '- {0} \'{1}\' set to \'{2}\''.format(node.getObjectType().lower(), node.getName(), value)
+
+    addToGlobalCount(count)
+    
+    return True
+
+
+

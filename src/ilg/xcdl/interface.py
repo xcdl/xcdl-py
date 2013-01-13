@@ -28,6 +28,18 @@ class Interface(Object):
         if key in self._kwargs:
             del self._kwargs[key]
             raise ErrorWithDescription('Unsupported property {0}'.format(key))
+
+        key='valueType'
+        self._valueType = 'int'
+        if key in self._kwargs:
+            del self._kwargs[key]
+            raise ErrorWithDescription('Unsupported property {0}'.format(key))
+
+        key='implements'
+        self._implementsList = 'int'
+        if key in self._kwargs:
+            del self._kwargs[key]
+            raise ErrorWithDescription('Unsupported property {0}'.format(key))
         
         return
 
@@ -43,4 +55,6 @@ class Interface(Object):
         # interfaces as non configurable
         return False
     
+
+
 

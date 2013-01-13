@@ -90,8 +90,8 @@ class Object(object):
         if key in self._kwargs:
             # none, bool, number, string
             val = self._kwargs[key]
-            if val not in ['none', 'bool', 'number', 'string']:
-                raise ErrorWithDescription('Unsupported valueType {0}'.format(val))
+            if val not in ['none', 'bool', 'int', 'float', 'string']:
+                print 'ERROR: Unsupported valueType \'{0}\' using \'none\' in node \'{1}\''.format(val, self._id)
             
             self._valueType = self._kwargs[key]
             del self._kwargs[key]
@@ -113,7 +113,7 @@ class Object(object):
         key='defaultValue'
         self._defaultValueExpression = None
         if self._computedExpression != None:
-            print 'Node {0} already has a compute, \‘defaultValue\' ignored'.format(self._id)
+            print 'ERROR: Node {0} already has a compute, \‘defaultValue\' ignored'.format(self._id)
         else:
             if key in self._kwargs:
                 self._defaultValueExpression = self._kwargs[key]
@@ -128,13 +128,13 @@ class Object(object):
         key='activeIf'
         self._activeIfList = None
         if key in self._kwargs:
-            self._activeIfList = self._kwargs[key]
+            self._activeIfList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
             del self._kwargs[key]
 
         key='requires'
         self._requiresList = None
         if key in self._kwargs:
-            self._requiresList = self._kwargs[key]
+            self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
             del self._kwargs[key]
 
         key='implements'
@@ -193,7 +193,25 @@ class Object(object):
     def getNonRecognisedKeywords(self):
         
         return self._kwargs;
-    
+   
+   
+    def enforceListOfStrings(self, args, sid, key):
+        
+        if isinstance(args, basestring):
+            localList = []
+            localList.append(args)
+            return localList
+        elif isinstance(args, list):
+            localList = []
+            for arg in args:
+                if isinstance(arg, basestring):
+                    localList.append(arg)
+                else:
+                    print 'ERROR: \'{0}\' value \'{1}\' not a string in node \'{2}\''.format(key, arg, sid)
+            if len(localList) > 0:
+                return localList
+        return None
+
         
     # -------------------------------------------------------------------------
     # main properties id, name, description
@@ -342,28 +360,18 @@ class Object(object):
         if not self.isActive():
             return 0
         
-        if self._value != None:
-            if isinstance(self._value, basestring):
-                return eval(self._value)
-            else:
-                return self._value
-    
-        if self._computedExpression != None:
-            if isinstance(self._computedExpression, basestring):
-                return eval(self._computedExpression)
-            else:
-                return self._computedExpression
+        valueType = self.getValueTypeWithDefault()
+        if valueType != 'none':
 
-        if self._defaultValueExpression != None:
-            if isinstance(self._defaultValueExpression, basestring):
-                #return eval(self._defaultValueExpression)
-                try:
-                    evaluatedValue = eval(self._defaultValueExpression)
-                except:
-                    evaluatedValue = self._defaultValueExpression
-                return evaluatedValue
-            else:
-                return self._defaultValueExpression
+            # give priority to computed expressions
+            if self._computedExpression != None:
+                return self._evaluateExpression(self._computedExpression)
+    
+            if self._value != None:
+                return self._evaluateExpression(self._value)
+    
+            if self._defaultValueExpression != None:
+                return self._evaluateExpression(self._defaultValueExpression)
     
         # otherwise active objects have a value of 1/True
         return 1
@@ -378,15 +386,92 @@ class Object(object):
         valueType = self.getValueTypeWithDefault()
         
         if valueType == 'bool':
-            return (True if (valueString == '1') else False)
+            return (True if (valueString == '1' or valueString == 'True') else False)
         elif valueType == 'string':
             return valueString
+        elif valueType == 'int':
+            return int(valueString)
+        elif valueType == 'float':
+            return float(valueString)
         else:
-            floatValue = float(value)
-            if float.is_integer(floatValue):
-                return int(value)
+            return value
+        
+    
+    def setValueWithCount(self, value):
+        
+        evaluatedValue = self._evaluateExpression(value)
+        
+        # TODO: check limits
+        
+        count = 0
+        if evaluatedValue != None:
+            if self._value != evaluatedValue:  
+                self._value = evaluatedValue
+                count = 1
+        
+        return count
+
+
+    def _evaluateExpression(self, expression):
+        
+        if isinstance(expression, basestring):
+            expression = expression.strip()
+        
+        evaluatedValue = None
+        valueType = self.getValueTypeWithDefault()
+        if valueType == 'none':    
+            return None
+        elif valueType == 'string':
+            if isinstance(expression, basestring):
+                try:
+                    evaluatedValue = eval(expression)
+                except:
+                    evaluatedValue = expression
             else:
-                return floatValue
+                evaluatedValue = str(expression)
+        elif valueType == 'bool':
+            if isinstance(expression, basestring):
+                try:
+                    evaluatedValue = eval(expression)
+                except:
+                    evaluatedValue = True if (expression.lower() == 'true') else False
+            else:
+                evaluatedValue = True if expression else False
+        elif valueType == 'int':
+            if isinstance(expression, basestring):
+                try:
+                    evaluatedValue = int(eval(expression))
+                except:
+                    try:
+                        evaluatedValue = int(expression)
+                    except:
+                        print 'ERROR: string expression \'{0}\' not integer, in node \'{1}\' (use 0)'.format(expression, self._id)
+                        evaluatedValue = 0
+            else:
+                try:
+                    evaluatedValue = int(expression)
+                except:
+                    print 'ERROR: expression \'{0}\' not integer, in node \'{1}\' (use 0)'.format(expression, self._id)
+                    evaluatedValue = 0
+                    
+        elif valueType == 'float':
+            if isinstance(expression, basestring):
+                try:
+                    evaluatedValue = float(eval(expression))
+                except:
+                    try:
+                        evaluatedValue = float(expression)
+                    except:
+                        print 'ERROR: string expression \'{0}\' not float, in node \'{1}\' (use 0)'.format(expression, self._id)
+                        evaluatedValue = 0.0                        
+            else:
+                try:
+                    evaluatedValue = float(expression)
+                except:
+                    print 'ERROR: expression \'{0}\' not float, in node \'{1}\' (use 0)'.format(expression, self._id)
+                    evaluatedValue = 0
+        
+        return evaluatedValue 
         
     
     # -------------------------------------------------------------------------

@@ -131,7 +131,7 @@ class Application(CommonApplication):
 
         if self.desiredConfigurationId != None:
             print
-            self.loadConfiguration(configTreesList, self.desiredConfigurationId, -1)
+            configNode = self.loadConfiguration(configTreesList, self.desiredConfigurationId, -1)
 
             print
             print 'Process initial \'isEnabled\' properties'
@@ -139,7 +139,7 @@ class Application(CommonApplication):
             
             print
             print 'Process \'requires\' properties'
-            self.processRequires(packagesTreesList)
+            self.processRequires(packagesTreesList, configNode)
             
             print
             self.dumpTree(packagesTreesList, True)
