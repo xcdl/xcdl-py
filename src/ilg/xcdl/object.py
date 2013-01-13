@@ -550,7 +550,7 @@ class Object(object):
         
     def getPackageTreeNode(self):
         
-        if self.getObjectType() == 'Package':
+        if self.getObjectType() == 'Package' or self.getObjectType() == 'Repository':
             return self
         
         if self._treeParent == None:

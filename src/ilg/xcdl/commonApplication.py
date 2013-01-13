@@ -9,11 +9,14 @@ from ilg.xcdl.packageLocation import PackageLocation
 
 # WARNING: DO NOT REMOVE the UnusedImport lines!
 # They are needed in executed scripts
-from ilg.xcdl.component import Component  # @UnusedImport
-from ilg.xcdl.package import Package  # @UnusedImport
 from ilg.xcdl.configuration import Configuration  # @UnusedImport
+
+from ilg.xcdl.repository import Repository  # @UnusedImport
+from ilg.xcdl.package import Package  # @UnusedImport
+from ilg.xcdl.component import Component  # @UnusedImport
 from ilg.xcdl.interface import Interface  # @UnusedImport
 from ilg.xcdl.option import Option  # @UnusedImport
+
 from ilg.xcdl.packageFolder import PackageFolder  # @UnusedImport
 
 

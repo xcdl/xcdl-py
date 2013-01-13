@@ -18,21 +18,12 @@ class Package(Component):
             self._loadPackagesList = self._kwargs[key]
             del self._kwargs[key]
 
-        key = 'buildSubFolder'
-        self._buildSubFolder = None
-        if key in self._kwargs:
-            self._buildSubFolder = self._kwargs[key]
-            del self._kwargs[key]
-
         key = 'buildIncludeFolders'
         self._buildIncludeFoldersList = None
         if key in self._kwargs:
             self._buildIncludeFoldersList = self._kwargs[key]
             del self._kwargs[key]
         
-        # set only to root nodes
-        self._repositoryFolder = None 
-           
         return
     
     
@@ -72,19 +63,6 @@ class Package(Component):
         return True
     
     
-    def getBuildSubFolder(self):
-        
-        return self._buildSubFolder
-    
-    
-    def getBuildSubFolderWithDefault(self):
-        
-        if self._buildSubFolder != None:
-            return self._buildSubFolder
-        
-        return self.getId()
-       
-       
     def getBuildIncludeFolders(self):
         
         return self._buildIncludeFoldersList
@@ -104,15 +82,4 @@ class Package(Component):
                 localList.extend(parentPackageTreeNode.getBuildIncludeFoldersRecursive())
  
         return localList
-    
-    
-    def setRepositoryFolderAbsolutePath(self, repositoryFolder):
-        
-        self._repositoryFolder = repositoryFolder
-        return
-    
-    
-    def getRepositoryFolderAbsolutePath(self):
-        
-        return self._repositoryFolder
     
