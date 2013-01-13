@@ -47,7 +47,7 @@ class Application(CommonApplication):
 
         # application specific members
 
-        self.packagesFilePathList = []
+        self.packagesAbsolutePathList = []
         
         self.configFilePath = None
         
@@ -90,7 +90,7 @@ class Application(CommonApplication):
                 if o in ('-c', '--config'):
                     self.configFilePath = a
                 elif o in ('-p', '--packages'):
-                    self.packagesFilePathList.append(a)
+                    self.packagesAbsolutePathList.append(a)
                 elif o in ('-i', '--id'):
                     self.desiredConfigurationId = a
                 elif o in ('-o', '--output'):
@@ -122,9 +122,6 @@ class Application(CommonApplication):
 
     def validate(self):
         
-        if len(self.packagesFilePathList) == 0:
-            raise ErrorWithDescription('Missing --packages parameter')
-        
         if self.configFilePath == None:
             raise ErrorWithDescription('Missing --config parameter')
 
@@ -150,34 +147,41 @@ class Application(CommonApplication):
         
         self.validate()
         
-        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList, 0)
+        (configTreesList,repoFolderAbsolutePathList) = self.parseConfigurationFile(self.configFilePath, 0)
 
-        configTreesList = self.processConfigFile(self.configFilePath, 0)
-
-        if self.verbosity > 1:
-            print
-            self.dumpTree(packagesTreesList, False)
+        self.packagesAbsolutePathList.extend(repoFolderAbsolutePathList)
         
+        
+        if self.verbosity > 1:
             print
             self.dumpConfiguration(configTreesList)
 
-        print
+        if self.verbosity > 0:
+            print
+        repositoriesList = self.parseRepositories(self.packagesAbsolutePathList, 0)
+
+        if self.verbosity > 1:
+            print
+            self.dumpTree(repositoriesList, False)
+        
+        if self.verbosity > 0:
+            print
         configNode = self.loadConfiguration(configTreesList, 
                                             self.desiredConfigurationId, 0)
 
         if self.verbosity > 0:
             print
             print 'Process the initial \'isEnabled\' properties...'
-        self.processInitialIsEnabled(packagesTreesList)
+        self.processInitialIsEnabled(repositoriesList)
 
         if self.verbosity > 0:
             print
             print 'Process the \'requires\' properties...'
-        self.processRequiresProperties(packagesTreesList, configNode, False)
+        self.processRequiresProperties(repositoriesList, configNode, False)
 
         # and one more time, to report remaining errors
         CommonApplication.clearErrorCount()
-        self.processRequiresProperties(packagesTreesList, configNode, True)
+        self.processRequiresProperties(repositoriesList, configNode, True)
         count = CommonApplication.getErrorCount()
         if count == 1:
             raise ErrorWithDescription('1 requirement not satisfied, quitting')
@@ -186,7 +190,7 @@ class Application(CommonApplication):
 
         if self.verbosity > 1:
             print
-            self.dumpTree(packagesTreesList, True)
+            self.dumpTree(repositoriesList, True)
 
         if not os.path.isdir(self.outputFolder):
             os.makedirs(self.outputFolder)
@@ -200,19 +204,19 @@ class Application(CommonApplication):
         if self.verbosity > 0:
             print
             print 'Generate header files...'
-        self.generatePreprocessorDefinitions(packagesTreesList, self.outputFolder, outputSubFolder)
+        self.generatePreprocessorDefinitions(repositoriesList, self.outputFolder, outputSubFolder)
         
         if self.verbosity > 0:
             print
             print 'Generate Make files...'
-        self.generateAllMakeFiles(packagesTreesList, configNode, self.outputFolder, outputSubFolder)
+        self.generateAllMakeFiles(repositoriesList, configNode, self.outputFolder, outputSubFolder)
         
         return
 
 
-    def generatePreprocessorDefinitions(self, packagesTreesList, outputFolder, outputSubFolder):
+    def generatePreprocessorDefinitions(self, repositoriesList, outputFolder, outputSubFolder):
         
-        headersDict = self.buildHeadersDict(packagesTreesList)
+        headersDict = self.buildHeadersDict(repositoriesList)
         for fileRelativePath in headersDict.iterkeys():
             
             fileAbsolutePath = os.path.join(outputFolder, outputSubFolder, fileRelativePath)
@@ -256,9 +260,12 @@ class Application(CommonApplication):
         return
 
 
-    def generateAllMakeFiles(self, packagesTreesList, configNode, outputFolder, outputSubFolder):
+    def generateAllMakeFiles(self, repositoriesList, configNode, outputFolder, outputSubFolder):
         
-        sourcesDict = self.buildSourcesDict(packagesTreesList)
+        # build a dictionary of sources, grouped by folder relative path
+        sourcesDict = self.buildSourcesDict(repositoriesList)
+        
+        # iterate all folders
         for folderRelativePath in sourcesDict.iterkeys():
             
             folderAbsolutePath = os.path.join(outputFolder, outputSubFolder, folderRelativePath)
@@ -367,7 +374,10 @@ class Application(CommonApplication):
                     toolName = 'LLVM Clang'
                 
                 if self.verbosity > 0:
-                    print '- compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
+                    #print '- compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
+                    eList = e['buildPathList']
+                    ePath = os.path.join(os.sep.join(eList[1:]), fileNameComplete)
+                    print '- compile {0} \'{1}\''.format(eList[0], ePath)
 
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 

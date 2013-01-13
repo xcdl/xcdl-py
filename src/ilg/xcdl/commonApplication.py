@@ -17,7 +17,7 @@ from ilg.xcdl.component import Component  # @UnusedImport
 from ilg.xcdl.interface import Interface  # @UnusedImport
 from ilg.xcdl.option import Option  # @UnusedImport
 
-from ilg.xcdl.packageFolder import PackageFolder  # @UnusedImport
+from ilg.xcdl.repositoryFolder import RepositoryFolder  # @UnusedImport
 
 
 class CommonApplication(object):
@@ -121,31 +121,31 @@ class CommonApplication(object):
         return
     
     
-    def processPackagesTrees(self, packagesFilePathList, minVerbosity):
+    def parseRepositories(self, repositoriesAbsolutePathList, minVerbosity):
         
         # build a list of trees, for all given packages
-        packagesTreesList = []
+        repositoriesList = []
                 
-        for filePath in packagesFilePathList:
+        for repositoryAbsolutePath in repositoriesAbsolutePathList:
             
-            packsList = self.processPackageTree(filePath, minVerbosity)
+            packsList = self.parseRepository(repositoryAbsolutePath, minVerbosity)
             if packsList != None:
-                packagesTreesList.extend(packsList)
+                repositoriesList.extend(packsList)
         
-        return packagesTreesList
+        return repositoriesList
     
 
-    def processPackageTree(self, packagePath, minVerbosity):
+    def parseRepository(self, repoFolderAbsolutePathList, minVerbosity):
                         
-        packageAbsolutePath = os.path.abspath(packagePath)
+        packageAbsolutePath = os.path.abspath(repoFolderAbsolutePathList)
 
         if os.path.isdir(packageAbsolutePath):
             if self.verbosity > minVerbosity:
-                print 'Process packages folder \'{0}\'...'.format(packagePath)
+                print 'Parse repository folder \'{0}\'...'.format(repoFolderAbsolutePathList)
             rootList = self.processFolderRecursive(None, packageAbsolutePath)
-        elif os.path.isfile(packagePath):
+        elif os.path.isfile(repoFolderAbsolutePathList):
             if self.verbosity > minVerbosity:
-                print 'Process packages file \'{0}\'....'.format(packagePath)
+                print 'Parse packages file \'{0}\'....'.format(repoFolderAbsolutePathList)
             # process the given script and recurse
             rootList = self.processScript(None, packageAbsolutePath)
         else:
@@ -159,21 +159,43 @@ class CommonApplication(object):
         return rootList
 
 
-    def processConfigFile(self, configFilePath, minVerbosity):
+    def parseConfigurationFile(self, configFilePath, minVerbosity):
         
         if self.verbosity > minVerbosity:
-            print        
-            print 'Process configuration file \'{0}\'...'.format(configFilePath)
+            print 'Parse configuration file \'{0}\'...'.format(configFilePath)
         configFileAbsolutePath = os.path.abspath(self.configFilePath)
         
+        localRepositoriesList = []
+        RepositoryFolder.setList(localRepositoriesList)
+        
         # process the given script and recurse
-        rootList = self.processScript(None, configFileAbsolutePath, None)
+        configTreesList = self.processScript(None, configFileAbsolutePath, None)
 
-        for node in rootList:
+        for node in configTreesList:
             if self.verbosity > 0:
                 print '- configuration \'{0}\' processed'.format(node.getName())
 
-        return rootList
+        repoFolderAbsolutePathList = []
+        for repo in localRepositoriesList:
+            repoPath = repo.getFolderPath()
+            if os.path.isabs(repoPath):
+                repoAbsolutePath = repoPath
+            else:
+                (configFolderAbsolutePath,_) = os.path.split(configFileAbsolutePath)
+                repoAbsolutePath = os.path.abspath(os.path.join(configFolderAbsolutePath, repoPath))
+
+            if os.path.isdir(repoAbsolutePath):
+                repoFolderAbsolutePathList.append(repoAbsolutePath)
+                if self.verbosity > 0:
+                    print '- repository folder \'{0}\' added to list'.format(repoAbsolutePath)
+            elif os.path.isfile(repoAbsolutePath):
+                repoFolderAbsolutePathList.append(repoAbsolutePath)
+                if self.verbosity > 0:
+                    print '- repository package file \'{0}\' added to list'.format(repoAbsolutePath)
+            else:
+                print 'ERROR: path \'{0}\' does not exist, ignored'.format(repoAbsolutePath)
+
+        return (configTreesList, repoFolderAbsolutePathList)
     
     
     def processFolderRecursive(self, parent, folderAbsolutePath):
@@ -400,7 +422,7 @@ class CommonApplication(object):
         return
     
     
-    def dumpTree(self, packagesTreesList, isLoaded):
+    def dumpTree(self, repositoriesList, isLoaded):
         
         if not isLoaded:
             print "The packages trees:"
@@ -408,7 +430,7 @@ class CommonApplication(object):
             print "The loaded packages trees:"
         
         print
-        for tree in packagesTreesList:
+        for tree in repositoriesList:
             self.dumpTreeRecursive(tree, 0, isLoaded)
         return
     
@@ -593,11 +615,11 @@ class CommonApplication(object):
         return updated
     
     
-    def dumpPreprocessorDefinitions(self, packagesTreesList):
+    def dumpPreprocessorDefinitions(self, repositoriesList):
         
         print "The preprocessor definitions:"
         
-        headersDict = self.buildHeadersDict(packagesTreesList)
+        headersDict = self.buildHeadersDict(repositoriesList)
         for key in headersDict.iterkeys():
             headerLines = headersDict[key]
             print
@@ -608,10 +630,10 @@ class CommonApplication(object):
         return
     
 
-    def buildHeadersDict(self, packagesTreesList):
+    def buildHeadersDict(self, repositoriesList):
         
         headersDict = {}
-        for tree in packagesTreesList:
+        for tree in repositoriesList:
             self.buildHeadersDictRecursive(tree, 0, headersDict)
             
         return headersDict
@@ -650,11 +672,11 @@ class CommonApplication(object):
         return
     
     
-    def dumpSourceFiles(self, packagesTreesList):
+    def dumpSourceFiles(self, repositoriesList):
         
         print "The source files to compile:"
         
-        sourcesDict = self.buildSourcesDict(packagesTreesList)
+        sourcesDict = self.buildSourcesDict(repositoriesList)
         for key in sourcesDict.iterkeys():
             sources = sourcesDict[key]
             print
@@ -665,10 +687,10 @@ class CommonApplication(object):
         return
     
 
-    def buildSourcesDict(self, packagesTreesList):
+    def buildSourcesDict(self, repositoriesList):
 
         sourcesDict = {}
-        for tree in packagesTreesList:
+        for tree in repositoriesList:
             self.buildSourcesDictRecursive(tree, 0, sourcesDict)
             
         return sourcesDict
@@ -745,7 +767,7 @@ class CommonApplication(object):
                     
                     crtSourceDict = {}
                     crtSourceDict['fileName'] = sourceFile
-                    #crtSourceDict['buildPathList'] = buildPathList
+                    crtSourceDict['buildPathList'] = buildPathList
                     crtSourceDict['sourceAbsolutePath'] = sourceAbsolutePath
                     crtSourceDict['repoNode'] = node
                     
@@ -765,11 +787,11 @@ class CommonApplication(object):
         return
     
     
-    def processInitialIsEnabled(self, packagesTreesList):
+    def processInitialIsEnabled(self, repositoriesList):
     
         while True:
             count = 0
-            for tree in packagesTreesList:
+            for tree in repositoriesList:
                 count += self.processInitialIsEnabledRecursive(tree, 0)
                             
             if count == 0:
@@ -802,7 +824,7 @@ class CommonApplication(object):
         return count
 
 
-    def processRequiresProperties(self, packagesTreesList, configNode, doReport):
+    def processRequiresProperties(self, repositoriesList, configNode, doReport):
     
         while True:
             clearGlobalCount()
@@ -811,7 +833,7 @@ class CommonApplication(object):
             self.processConfigRequiresRecursive(configNode, 0, doReport)
             
             # than the packages trees
-            for tree in packagesTreesList:
+            for tree in repositoriesList:
                 self.processTreeRequiresRecursive(tree, 0, doReport)
                 self.processImplementsPropertiesRecursive(tree, 0)
                             
@@ -837,7 +859,8 @@ class CommonApplication(object):
                     # count errors
                     CommonApplication.addToErrorCount(1)
                     if doReport:
-                        print 'ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                        print ('ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.
+                               format(requires, node.getName()))
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -858,7 +881,8 @@ class CommonApplication(object):
             for requires in requiresList:
                 if not eval(requires):
                     if doReport:
-                        print 'ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                        print ('ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.
+                               format(requires, node.getName()))
 
         parentNode = node.getTreeParent()
         if parentNode == None:
@@ -891,7 +915,9 @@ class CommonApplication(object):
                 count = interfaceNode.addImplementationWithCount(node.getId())
                 if count > 0:
                     if self.verbosity > 0:
-                        print '- {0} \'{1}\' implements \'{2}\''.format(node.getObjectType().lower(), node.getName(), interfaceNode.getName())
+                        print '- {0} \'{1}\' implements \'{2}\''.format(
+                                    node.getObjectType().lower(), node.getName(), 
+                                    interfaceNode.getName())
                     addToGlobalCount(count)
                            
         children = node.getTreeChildrenList()
