@@ -19,6 +19,13 @@ class Repository(Package):
             self._buildSubFolder = self._kwargs[key]
             del self._kwargs[key]
 
+        key = 'sourcesPaths'
+        self._sourcesPathsList = None
+        if key in self._kwargs:
+            self._sourcesPathsList = self._kwargs[key]
+            del self._kwargs[key]
+        
+
         # only for repository nodes
         self._repositoryFolder = None 
            

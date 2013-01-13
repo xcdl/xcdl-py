@@ -109,7 +109,7 @@ class Application(CommonApplication):
             self.process()
             
         except ErrorWithDescription as err:
-            print err
+            print 'ERROR: {0}'.format(err)
             retval = 1
     
         finally:
@@ -174,8 +174,15 @@ class Application(CommonApplication):
             print
             print 'Process the \'requires\' properties...'
         self.processRequiresProperties(packagesTreesList, configNode, False)
+
         # and one more time, to report remaining errors
+        CommonApplication.clearErrorCount()
         self.processRequiresProperties(packagesTreesList, configNode, True)
+        count = CommonApplication.getErrorCount()
+        if count == 1:
+            raise ErrorWithDescription('1 requirement not satisfied, quitting')
+        elif count > 1:
+            raise ErrorWithDescription('{0} requirements not satisfied, quitting'.format(count))
 
         if self.verbosity > 1:
             print

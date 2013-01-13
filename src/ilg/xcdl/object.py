@@ -54,12 +54,16 @@ class Object(object):
         if key in self._kwargs:
             self._name = self._kwargs[key]
             del self._kwargs[key]
+        else:
+            raise ErrorWithDescription('Mandatory name missing, id=\'{0}\''.format(self._id))
 
         key = 'description'
         self._description = None
         if key in self._kwargs:
             self._description = self._kwargs[key]
             del self._kwargs[key]
+        else:
+            raise ErrorWithDescription('Mandatory description missing, id=\'{0}\''.format(self._id))
                 
         key = 'sourceFiles'
         self._sourceFilesList = None
@@ -171,14 +175,8 @@ class Object(object):
             self._parentId = self._kwargs[key]
             del self._kwargs[key]
 
-        # ???
-        # ---------------------------------------------------------------------
-        key = 'sourcesPaths'
+        # can be set only in Repository object
         self._sourcesPathsList = None
-        if key in self._kwargs:
-            self._sourcesPathsList = self._kwargs[key]
-            del self._kwargs[key]
-        
         
         return
 

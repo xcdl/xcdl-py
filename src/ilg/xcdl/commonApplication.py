@@ -86,6 +86,27 @@ class CommonApplication(object):
         CommonApplication.verbosity = verbosity
     
     
+    errorCount = 0
+
+    @staticmethod    
+    def getErrorCount():
+        
+        return CommonApplication.errorCount
+    
+
+    @staticmethod    
+    def clearErrorCount():
+    
+        CommonApplication.errorCount = 0
+        return
+
+
+    @staticmethod    
+    def addToErrorCount(count):
+        
+        CommonApplication.errorCount += count
+        return
+    
     
     def __init__(self, *argv):
         
@@ -133,7 +154,7 @@ class CommonApplication(object):
         for node in rootList:
             node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
             if self.verbosity > 0:
-                print '- package tree \'{0}\' processed'.format(node.getName())
+                print '- {0} \'{1}\' processed'.format(node.getObjectType().lower(), node.getName())
                         
         return rootList
 
@@ -813,8 +834,10 @@ class CommonApplication(object):
             
             for requires in requiresList:
                 if not eval(requires):
+                    # count errors
+                    CommonApplication.addToErrorCount(1)
                     if doReport:
-                        print 'ERROR: requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                        print 'ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -835,7 +858,7 @@ class CommonApplication(object):
             for requires in requiresList:
                 if not eval(requires):
                     if doReport:
-                        print 'ERROR: requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                        print 'ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
 
         parentNode = node.getTreeParent()
         if parentNode == None:
