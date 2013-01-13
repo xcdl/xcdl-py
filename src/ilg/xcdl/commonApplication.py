@@ -583,32 +583,6 @@ class CommonApplication(object):
             
         return
     
-    
-#    def dumpPreprocessorDefinitionsRecursive(self, node, depth):
-#
-#        if not node.isLoaded():
-#            return
-#        
-#        headerLineAndFileName = node.getHeaderLineAndFileName()
-#        if headerLineAndFileName != None:
-#            
-#            (headerDefinition, headerFile) = headerLineAndFileName
-#            
-#            if self.verbosity:
-#                print 'process {0}'.format(node.getId())
-#
-#            print 'file: \'{0}\''.format(headerFile)
-#            print headerDefinition
-#            print
-#             
-#        children = node.getTreeChildrenList()
-#        if children == None:
-#            return
-#        
-#        # iterate through all children
-#        for child in children:           
-#            self.dumpPreprocessorDefinitionsRecursive(child, depth + 1)            
-
 
     def buildHeadersDict(self, packagesTreesList):
         
@@ -665,79 +639,6 @@ class CommonApplication(object):
                 print '   source {0}, from node \'{1}\''.format(source['fileName'], source['repoNode'].getName())
             
         return
-
-
-#    def dumpSourceFilesRecursive(self, node, depth):
-#
-#        if not node.isLoaded():
-#            return
-#        
-#        if node.isActive():
-#            
-#            sourceFiles = node.getSourceFilesList()
-#            if sourceFiles != None:
-#            
-#                if self.verbosity:
-#                    print 'process {0}'.format(node.getId())
-#
-#                packageFolder = node.getPackageLocation().getFolderAbsolutePath()
-#                #if self.verbosity:
-#                #    print 'package folder: \'{0}\''.format(packageFolder)
-#
-#                treeRoot = node.getTreeRoot()
-#                buildSubFolder = treeRoot.getBuildSubFolderWithDefault()
-#                #if self.verbosity:
-#                #    print 'build subfolder: \'{0}\''.format(buildSubFolder)
-#                
-#                rootPackageFolder = treeRoot.getPackageLocation().getFolderAbsolutePath()
-#                #if self.verbosity:
-#                #    print 'root package folder: \'{0}\''.format(rootPackageFolder)
-#                
-#                sourcesPathsList = node.getSourcePathsListRecursive()
-#                if sourcesPathsList == None:
-#                    sourcesPathsList = CommonApplication.getSourcePathsListDefault()
-#                
-#                      
-#                for sourceFile in sourceFiles:
-#                    print 'source file: \'{0}\''.format(sourceFile)
-#
-#                    foundSourcePath = None
-#                    for sourcePath in sourcesPathsList:
-#                        sourceAbsolutePath = os.path.join(packageFolder, sourcePath, sourceFile)
-#                        if os.path.isfile(sourceAbsolutePath):
-#                            print 'source file path: \'{0}\''.format(sourceAbsolutePath)
-#                            foundSourcePath = sourcePath
-#                            break
-#                        
-#                    if foundSourcePath == None:
-#                        print 'not found'
-#                        continue
-#                    
-#                    if not sourceAbsolutePath.startswith(rootPackageFolder):
-#                        print 'paths do not match'
-#                        continue
-#                    
-#                    subPath = sourceAbsolutePath[len(rootPackageFolder)+1:]
-#                    #print subPath
-#                    subPathList = subPath.split(os.sep)
-#                    #print subPathList
-#                    
-#                    buildPath = []
-#                    buildPath.append(buildSubFolder)
-#                    buildPath.extend(subPathList[:-1])
-#                    print 'build path: {0}'.format(os.sep.join(buildPath))
-#                    
-#                print
-#             
-#        children = node.getTreeChildrenList()
-#        if children == None:
-#            return
-#        
-#        # iterate through all children
-#        for child in children:           
-#            self.dumpSourceFilesRecursive(child, depth + 1)            
-#            
-#        return
     
 
     def buildSourcesDict(self, packagesTreesList):
@@ -877,17 +778,18 @@ class CommonApplication(object):
         return count
 
 
-    def processRequires(self, packagesTreesList, configNode):
+    def processRequiresProperties(self, packagesTreesList, configNode, doReport):
     
         while True:
             clearGlobalCount()
             
             # first process the configuration requirements
-            self.processConfigRequiresRecursive(configNode, 0)
+            self.processConfigRequiresRecursive(configNode, 0, doReport)
             
             # than the packages trees
             for tree in packagesTreesList:
-                self.processTreeRequiresRecursive(tree, 0)
+                self.processTreeRequiresRecursive(tree, 0, doReport)
+                self.processImplementsPropertiesRecursive(tree, 0)
                             
             if getGlobalCount() == 0:
                 break
@@ -895,14 +797,21 @@ class CommonApplication(object):
         return
 
 
-    def processTreeRequiresRecursive(self, node, depth):
+    def processTreeRequiresRecursive(self, node, depth, doReport):
 
+        if not node.isLoaded():
+            return
+
+        if not node.isEnabled():
+            return
+        
         requiresList = node.getRequiresList()
         if requiresList != None:
             
             for requires in requiresList:
                 if not eval(requires):
-                    print '- requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                    if doReport:
+                        print 'ERROR: requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -910,26 +819,65 @@ class CommonApplication(object):
     
         # iterate through all children
         for child in children:           
-            self.processTreeRequiresRecursive(child, depth + 1)            
+            self.processTreeRequiresRecursive(child, depth + 1, doReport)            
 
         return
 
 
-    def processConfigRequiresRecursive(self, node, depth):
+    def processConfigRequiresRecursive(self, node, depth, doReport):
 
         requiresList = node.getRequiresList()
         if requiresList != None:
             
             for requires in requiresList:
                 if not eval(requires):
-                    print '- requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
+                    if doReport:
+                        print 'ERROR: requirement \'{0}\' not satisfied for node \'{1}\''.format(requires, node.getName())
 
         parentNode = node.getTreeParent()
         if parentNode == None:
             return
         
-        return self.processConfigRequiresRecursive(parentNode, depth+1)
+        return self.processConfigRequiresRecursive(parentNode, depth+1, doReport)
+
+
+
+    def processImplementsPropertiesRecursive(self, node, depth):
+
+        if not node.isLoaded():
+            return
+
+        if not node.isEnabled():
+            return
+        
+        implementsList = node.getImplementsList()
+        if implementsList != None:
+            
+            for sid in implementsList:
+                if not CommonApplication.isObjectById(sid):
+                    print 'ERROR: Missing id=\'{0}\', \'implements\' property ignored'.format(sid)
+                    
+                interfaceNode = CommonApplication.getObjectById(sid)
+                if interfaceNode.getObjectType() != 'Interface':
+                    print 'ERROR: Node id=\'{0}\', not an interface, \'implements\' property ignored'.format(sid)
+                
+                # finally add the current node to the interface implementations list    
+                count = interfaceNode.addImplementationWithCount(node.getId())
+                if count > 0:
+                    if self.verbosity > 0:
+                        print '- {0} \'{1}\' implements \'{2}\''.format(node.getObjectType().lower(), node.getName(), interfaceNode.getName())
+                    addToGlobalCount(count)
+                           
+        children = node.getTreeChildrenList()
+        if children == None:
+            return 
     
+        # iterate through all children
+        for child in children:           
+            self.processImplementsPropertiesRecursive(child, depth + 1)            
+
+        return
+
 
 # ----- functions used in xcdl expressions ------------------------------------
 
@@ -1067,6 +1015,24 @@ def setValue(sid, value):
     addToGlobalCount(count)
     
     return True
+
+
+def implementationsOf(sid):
+    
+    if CommonApplication.getVerbosity() > 1:
+        print 'implementationsOf("{0}")'.format(sid)
+
+    if not CommonApplication.isObjectById(sid):
+        print 'ERROR: Node not found, implementationsOf("{0}") returns 0'.format(sid)
+        return 0
+    
+    node = CommonApplication.getObjectById(sid)
+    if node.getObjectType() != 'Interface':
+        print 'ERROR: Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid)
+        return 0
+        
+    return node.getValue()
+
 
 
 

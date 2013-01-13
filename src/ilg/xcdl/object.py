@@ -584,7 +584,12 @@ class Object(object):
         
         return None
 
+
+    def getImplementsList(self):
+        
+        return self._implementsList
     
+        
     def computeSingleActiveIf(self, activeIf):
         
         return True

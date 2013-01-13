@@ -173,7 +173,9 @@ class Application(CommonApplication):
         if self.verbosity > 0:
             print
             print 'Process the \'requires\' properties...'
-        self.processRequires(packagesTreesList, configNode)
+        self.processRequiresProperties(packagesTreesList, configNode, False)
+        # and one more time, to report remaining errors
+        self.processRequiresProperties(packagesTreesList, configNode, True)
 
         if self.verbosity > 1:
             print

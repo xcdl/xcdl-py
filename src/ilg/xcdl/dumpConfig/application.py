@@ -139,7 +139,7 @@ class Application(CommonApplication):
             
             print
             print 'Process \'requires\' properties'
-            self.processRequires(packagesTreesList, configNode)
+            self.processRequiresProperties(packagesTreesList, configNode)
             
             print
             self.dumpTree(packagesTreesList, True)
