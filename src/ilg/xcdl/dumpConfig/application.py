@@ -40,7 +40,7 @@ class Application(CommonApplication):
 
         # application specific members
         
-        self.packagesFilePathList = []
+        self.packagesAbsolutePathList = []
         
         self.configFilePath = None
         
@@ -66,6 +66,7 @@ class Application(CommonApplication):
             self.usage()
             return 2
         
+        retval = 0
         try:
             if len(args) > 0:
                 print 'unused arguments: ', args
@@ -77,7 +78,7 @@ class Application(CommonApplication):
                 if o in ('-c', '--config'):
                     self.configFilePath = a
                 elif o in ('-p', '--packages'):
-                    self.packagesFilePathList.append(a)
+                    self.packagesAbsolutePathList.append(a)
                 elif o in ('-i', '--id'):
                     self.desiredConfigurationId = a
                 elif o in ('-v', '--verbose'):
@@ -92,35 +93,33 @@ class Application(CommonApplication):
             self.process()
             
         except ErrorWithDescription as err:
-            print err
+            print 'ERROR: {0}'.format(err)
+            retval = 1
     
         finally: 
             print   
             print '[done]'
             
-        return 0        
+        return retval        
 
-
-    def validate(self):
-        
-        if len(self.packagesFilePathList) == 0:
-            raise ErrorWithDescription('Missing --packages files')
-        
-        return
-    
 
     def process(self):
         
-        self.validate()
-        
         print
+        print '* The dumpConfig tool (part of the XCDL framework) *'
         print "* Dump the configuration trees *"
         print
+        if self.verbosity > 1:
+            print 'Verbosity level {0}'.format(self.verbosity)
+            print
         
-        packagesTreesList = self.processPackagesTrees(self.packagesFilePathList, -1)
-
+        repoFolderAbsolutePathList = []
         if self.configFilePath != None:
-            configTreesList = self.processConfigFile(self.configFilePath, -1)
+            (configTreesList,repoFolderAbsolutePathList) = self.parseConfigurationFile(self.configFilePath, -1)
+            self.packagesAbsolutePathList.extend(repoFolderAbsolutePathList)
+            
+        print
+        packagesTreesList = self.parseRepositories(self.packagesAbsolutePathList, -1)
 
         print
         self.dumpTree(packagesTreesList, False)
@@ -139,7 +138,13 @@ class Application(CommonApplication):
             
             print
             print 'Process \'requires\' properties'
-            self.processRequiresProperties(packagesTreesList, configNode)
+            self.processRequiresProperties(packagesTreesList, configNode, False)
+            
+            CommonApplication.clearErrorCount()
+            self.processRequiresProperties(packagesTreesList, configNode, False)
+            count = CommonApplication.getErrorCount()
+            if count > 0:
+                print '{0} error(s) encountered'.format(count)
             
             print
             self.dumpTree(packagesTreesList, True)
