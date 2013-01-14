@@ -382,6 +382,7 @@ class Application(CommonApplication):
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
                 f.write('\t{0}'.format(toolName))
+                
                 f.write(' -DDEBUG=1')
                 
                 buildFolderAbsolutePath=os.path.abspath(os.path.join(outputFolder, outputSubFolder))

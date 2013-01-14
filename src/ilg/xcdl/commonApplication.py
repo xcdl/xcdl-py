@@ -19,6 +19,9 @@ from ilg.xcdl.option import Option  # @UnusedImport
 
 from ilg.xcdl.repositoryFolder import RepositoryFolder  # @UnusedImport
 
+from ilg.xcdl.toolchain import Toolchain  # @UnusedImport
+from ilg.xcdl.toolchain import Tool  # @UnusedImport
+
 
 class CommonApplication(object):
 
@@ -114,7 +117,7 @@ class CommonApplication(object):
         
         self.verbosity = 0
 
-        self.defaultScripts = ['meta/xcdl.py']
+        self.defaultScripts = ['meta/xcdl.py', 'xcdl.py']
         
         self.indent = '   '
 
@@ -441,45 +444,60 @@ class CommonApplication(object):
             return
         
         indent = '   '
+        objectType = node.getObjectType()
         
-        kind = ' ({0}'.format(node.getObjectType())
+        kind = ' ({0}'.format(objectType)
         if node.getCategory() != None:
             kind += ',{0}'.format(node.getCategory())
         if node.getValueType() != None:
             kind += ',{0}'.format(node.getValueType())
         kind += ')'
         
-        kind += (' +E' if node.isEnabled() else ' -E')
-        kind += (' +A' if node.isActive() else ' -A')
+        if objectType not in ['Toolchain']:
+            kind += (' +E' if node.isEnabled() else ' -E')
+            kind += (' +A' if node.isActive() else ' -A')
         
         print '{0}* {1} \'{2}\'{3}'.format(indent * depth, node.getId(),
                             node.getName(), kind)
 
-        packageLocation = node.getPackageLocation()
-        if packageLocation != None:
-            print '{0}- packageFolder \'{1}\''.format(indent * (depth + 1),
-                                    packageLocation.getFolderAbsolutePath())
+        if objectType not in ['Toolchain']:
             
-        # dump sources, if any
-        sourcesList = node.getSourceFilesList()
-        if sourcesList != None:
-            for source in sourcesList:
-                print '{0}- sourceFile {1}'.format(indent * (depth + 1), source)
-
-        # dump loadPackages, if any
-        loadPackagesList = node.getLoadPackagesList()
-        if loadPackagesList != None:
-            for loadPackages in loadPackagesList:
-                print '{0}- loadPackage {1}'.format(indent * (depth + 1), loadPackages)
+            packageLocation = node.getPackageLocation()
+            if packageLocation != None:
+                print '{0}- packageFolder \'{1}\''.format(indent * (depth + 1),
+                                        packageLocation.getFolderAbsolutePath())
                 
-        headerDefinition = node.getHeaderDefinition()
-        if headerDefinition != None:
-            print '{0}- headerDefinition {1}'.format(indent * (depth + 1), headerDefinition)
-               
-        headerPath = node.getHeaderFile()
-        if headerPath != None:
-            print '{0}- headerFile \'{1}\''.format(indent * (depth + 1), headerPath)
-             
+            # dump sources, if any
+            sourcesList = node.getSourceFilesList()
+            if sourcesList != None:
+                for source in sourcesList:
+                    print '{0}- sourceFile {1}'.format(indent * (depth + 1), source)
+    
+            # dump loadPackages, if any
+            loadPackagesList = node.getLoadPackagesList()
+            if loadPackagesList != None:
+                for loadPackages in loadPackagesList:
+                    print '{0}- loadPackage {1}'.format(indent * (depth + 1), loadPackages)
+                    
+            headerDefinition = node.getHeaderDefinition()
+            if headerDefinition != None:
+                print '{0}- headerDefinition {1}'.format(indent * (depth + 1), headerDefinition)
+                   
+            headerPath = node.getHeaderFile()
+            if headerPath != None:
+                print '{0}- headerFile \'{1}\''.format(indent * (depth + 1), headerPath)
+        
+        else:
+            toolsDict = node.getToolsDict()
+            for key in toolsDict:
+                tool = toolsDict[key]
+                print '{0}- tool {1} \'{2}\' '.format(indent * (depth + 1), key, tool.getDescription())
+            
+            compilerMiscOptions = node.getProperty('compilerMiscOptions')
+            if compilerMiscOptions != None:
+                print '{0}- compilerMiscOptions \'{1}\' '.format(indent * (depth + 1), compilerMiscOptions)
+                
+                 
         children = node.getTreeChildrenList()
         if children == None:
             return

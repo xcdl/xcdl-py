@@ -18,7 +18,6 @@ class Component(Object):
             del self._kwargs[key]
 
 
-        # ???
         # ---------------------------------------------------------------------
         
         key = 'includes'
