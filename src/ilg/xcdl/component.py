@@ -45,9 +45,3 @@ class Component(Object):
         
         return self._includesList
 
-
-    def getDefaultIsEnabled(self):
-        
-        # components start as enabled
-        return True
-    

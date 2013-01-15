@@ -73,21 +73,25 @@ class Object(object):
 
         # ---------------------------------------------------------------------
             
+        #self.isConfigurable = self.getDefaultIsConfigurable()
+
         key='isConfigurable'
         self._isConfigurableExpression = None
         if key in self._kwargs:
             self._isConfigurableExpression = self._kwargs[key]
             del self._kwargs[key]
 
-        self.isConfigurable = self.getDefaultIsConfigurable()
         
+        self._isEnabled = self.getDefaultIsEnabled()
+
         key='isEnabled'
         self._initialIsEnabled = None
         if key in self._kwargs:
             self._initialIsEnabled = self._kwargs[key]
             del self._kwargs[key]
             
-        self._isEnabled = self.getDefaultIsEnabled()
+            if isinstance(self._initialIsEnabled, bool):
+                self._isEnabled = self._initialIsEnabled
 
         key='valueType'
         self._valueType = None
@@ -309,8 +313,9 @@ class Object(object):
     
     def getDefaultIsEnabled(self):
         
-        # most objects start as disabled (packages and interfaces are exceptions)
-        return False
+        # most objects start as enabled
+        # overwrite this for objects that are exceptions to this rule
+        return True
     
 
     def getDefaultIsConfigurable(self):
@@ -665,6 +670,6 @@ class Object(object):
         if isinstance(self._isConfigurableExpression, basestring):            
             return eval(self._isConfigurableExpression)
         else:
-            return self._isConfigurableExpression
+            return True if self._isConfigurableExpression else False
         
     

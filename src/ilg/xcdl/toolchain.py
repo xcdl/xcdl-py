@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2013 Liviu Ionescu.
+# This file is part of the XCDL distribution.
+
 from ilg.xcdl.object import Object
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 
@@ -14,6 +17,10 @@ class Toolchain(Object):
         'compilerMiscOptions',
         'compilerDebugOptions',
         'compilerOptimisationOptions',
+        
+        'linkerMiscOptions',
+        
+        'makeObjectsVariable',
     ]
     
     def __init__(self, **kwargs):
@@ -48,6 +55,14 @@ class Toolchain(Object):
             if key in self._kwargs:
                 self._properties[key] = self._kwargs[key]
                 del self._kwargs[key]
+
+        # ---------------------------------------------------------------------
+        
+        key = 'platformSystem'
+        self._platformSystem = None
+        if key in self._kwargs:
+            self._platformSystem = self._kwargs[key]
+            del self._kwargs[key]
             
         return
     
@@ -154,5 +169,11 @@ class Tool():
     def getOptions(self):
         
         return self._options
+    
+    
+    def getPlatformSystem(self):
+        
+        return self._platformSystem
+    
     
     

@@ -44,6 +44,7 @@ class CommonApplication(object):
     # initialise the dictionary where all objects will be stored
     allObjectsByIdDict = {}
     allObjectsByNameDict = {}
+    allObjectsBySymbolDict = {}
 
     @staticmethod    
     def isObjectById(sid):
@@ -66,6 +67,16 @@ class CommonApplication(object):
         return CommonApplication.allObjectsByNameDict[name]
 
     @staticmethod    
+    def isObjectBySymbol(name):
+        
+        return name in CommonApplication.allObjectsBySymbolDict
+
+    @staticmethod    
+    def getObjectBySymbol(name):
+        
+        return CommonApplication.allObjectsBySymbolDict[name]
+
+    @staticmethod    
     def insertObject(node):
         
         # insert node to both dictionaries
@@ -74,6 +85,15 @@ class CommonApplication(object):
         
         return
     
+    @staticmethod    
+    def insertObjectBySymbol(node):
+        
+        headerDefinition = node.getHeaderDefinition()
+        if headerDefinition != None:
+            CommonApplication.allObjectsBySymbolDict[headerDefinition] = node
+        
+        return
+
     
     verbosity = 0
 
@@ -150,7 +170,7 @@ class CommonApplication(object):
             if self.verbosity > minVerbosity:
                 print 'Parse packages file \'{0}\'....'.format(repoFolderAbsolutePathList)
             # process the given script and recurse
-            rootList = self.processScript(None, packageAbsolutePath)
+            rootList = self.parseScript(None, packageAbsolutePath)
         else:
             raise ErrorWithDescription("Path not a folder or a file")
         
@@ -172,7 +192,7 @@ class CommonApplication(object):
         RepositoryFolder.setList(localRepositoriesList)
         
         # process the given script and recurse
-        configTreesList = self.processScript(None, configFileAbsolutePath, None)
+        configTreesList = self.parseScript(None, configFileAbsolutePath, None)
 
         for node in configTreesList:
             if self.verbosity > 0:
@@ -212,7 +232,7 @@ class CommonApplication(object):
                     print 'is package'
                 
                 packageLocation = PackageLocation(folderAbsolutePath, tentativeFileAbsolutePath)
-                localList = self.processScript(parent, tentativeFileAbsolutePath, packageLocation)
+                localList = self.parseScript(parent, tentativeFileAbsolutePath, packageLocation)
                 crtParent = localList[0]
                 break
                  
@@ -226,10 +246,10 @@ class CommonApplication(object):
         return localList
     
     
-    def processScript(self, parent, scriptAbsolutePath, packageLocation):
+    def parseScript(self, parent, scriptAbsolutePath, packageLocation):
         
         if self.verbosity > 1:
-            print 'process script {0}'.format(scriptAbsolutePath)
+            print 'parse file {0}'.format(scriptAbsolutePath)
         
         # list used to collect all objects contributed by encountered 
         # constructors
@@ -240,7 +260,10 @@ class CommonApplication(object):
             raise ErrorWithDescription('Missing script file \'{0}\''.
                                        format(scriptAbsolutePath))
 
-        execfile(scriptAbsolutePath)
+        try:
+            execfile(scriptAbsolutePath)
+        except BaseException as err:
+            raise ErrorWithDescription('\'{0}\' in file \'{1}\''.format(err, scriptAbsolutePath))
         
         self.warnNonParsedKeywords(localList)
         
@@ -336,7 +359,7 @@ class CommonApplication(object):
     
     
     def processNode(self, node, parent, scriptAbsolutePath, packageLocation):
-          
+        
         # check if the id was already used
         if  CommonApplication.isObjectById(node.getId()):
                 
@@ -395,7 +418,7 @@ class CommonApplication(object):
         # remember the current package location
         if node.getPackageLocation() == None:
             node.setPackageLocation(packageLocation)
-            
+                        
         # store current object in the global dictionary    
         CommonApplication.insertObject(node)
         
@@ -412,16 +435,17 @@ class CommonApplication(object):
                                                 baseAbsolutePath, child))
                 # print childAbsolutePath
                     
-                self.processScript(node, childAbsolutePath, packageLocation)
+                self.parseScript(node, childAbsolutePath, packageLocation)
                 
         
         # process children nodes recursively
-        childrenList = node.getChildrenList()
+        # children were moved to tree by linkChildrenNodes()
+        childrenList = node.getTreeChildrenList()
         if childrenList != None:
             
             for child in childrenList:
                 self.processNode(child, node, scriptAbsolutePath, packageLocation)
-                
+
         return
     
     
@@ -493,11 +517,14 @@ class CommonApplication(object):
                 tool = toolsDict[key]
                 print '{0}- tool {1} \'{2}\' '.format(indent * (depth + 1), key, tool.getDescription())
             
+            compilerOptimisationOptions = node.getProperty('compilerOptimisationOptions')
+            if compilerOptimisationOptions != None:
+                print '{0}- compilerOptimisationOptions \'{1}\' '.format(indent * (depth + 1), compilerOptimisationOptions)
+                 
             compilerMiscOptions = node.getProperty('compilerMiscOptions')
             if compilerMiscOptions != None:
                 print '{0}- compilerMiscOptions \'{1}\' '.format(indent * (depth + 1), compilerMiscOptions)
                 
-                 
         children = node.getTreeChildrenList()
         if children == None:
             return
@@ -548,6 +575,10 @@ class CommonApplication(object):
                 print '{0}- preprocessorSymbol=\'{1}\''.format(indent * (depth + 1),
                                                             preprocessorSymbol)
                     
+        toolchainId = node.getToolchainId()
+        if toolchainId != None:
+            print'{0}- toolchain=\'{1}\''.format(indent * (depth + 1), toolchainId)
+            
         children = node.getTreeChildrenList()
         if children == None:
             return
@@ -823,13 +854,18 @@ class CommonApplication(object):
         count = 0
         initialIsEnabled = node.getInitialIsEnabled()
         if initialIsEnabled != None:
-            evaluatedValue = eval(initialIsEnabled)
-            
-            count += node.setIsEnabledWithCount(evaluatedValue)
+            if not isinstance(initialIsEnabled, bool):
+                # boolean values were already processed in constructor
+                try:
+                    evaluatedValue = eval(initialIsEnabled)
+                except:
+                    evaluatedValue = True if initialIsEnabled else False
                 
-            if count > 0 and self.verbosity > 0:
-                status = 'enabled' if evaluatedValue else 'disabled'
-                print '- {0} \'{1}\' initially {2}'.format(node.getObjectType().lower(), node.getName(), status)
+                count += node.setIsEnabledWithCount(evaluatedValue)
+                    
+                if count > 0 and self.verbosity > 0:
+                    status = 'enabled' if evaluatedValue else 'disabled'
+                    print '- {0} \'{1}\' initially {2}'.format(node.getObjectType().lower(), node.getName(), status)
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -949,6 +985,43 @@ class CommonApplication(object):
         return
 
 
+    def processSymbolsDict(self, repositoriesList):
+    
+        count = 0
+        for tree in repositoriesList:
+            count += self.processSymbolsDictRecursive(tree, 0)
+            
+        return count
+
+
+    def processSymbolsDictRecursive(self, node, depth):
+
+        count = 0
+        
+        if not node.isLoaded():
+            return count
+
+        headerDefinition = node.getHeaderDefinition()
+        if headerDefinition != None:
+
+            if CommonApplication.isObjectBySymbol(headerDefinition):
+                firstDefinition = CommonApplication.getObjectBySymbol(headerDefinition)
+                print 'ERROR: Preprocessor symbol {0} redefined in \'{1}\' (first definition in {2})'.format(headerDefinition, node.getName(), firstDefinition.getName())
+            else:
+                CommonApplication.insertObjectBySymbol(node)
+                count += 1
+                
+        children = node.getTreeChildrenList()
+        if children == None:
+            return count
+    
+        # iterate through all children
+        for child in children:           
+            count += self.processSymbolsDictRecursive(child, depth + 1)            
+
+        return count
+
+
 # ----- functions used in xcdl expressions ------------------------------------
 
 globalCount = 0
@@ -977,11 +1050,15 @@ def enable(sid):
     if CommonApplication.getVerbosity() > 1:
         print 'enable("{0}")'.format(sid)
         
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, enable("{0}") ignored'.format(sid)
-        return False
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, enable("{0}") ignored'.format(sid)
+            return False
     
-    node = CommonApplication.getObjectById(sid)
     if not node.isLoaded():
         print 'ERROR: Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid)
         return False
@@ -993,7 +1070,11 @@ def enable(sid):
     count = node.setIsEnabledWithCount()
 
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- {0} \'{1}\' enabled'.format(node.getObjectType().lower(), node.getName())
+        symbolName = node.getHeaderDefinition()
+        if symbolName != None:
+            print '- {0} \'{1}\'/{2} enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
+        else:
+            print '- {0} \'{1}\' enabled'.format(node.getObjectType().lower(), node.getName())
         
     addToGlobalCount(count)
     
@@ -1002,11 +1083,15 @@ def enable(sid):
 
 def disable(sid):
         
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, disable("{0}") ignored'.format(sid)
-        return False
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:   
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, disable("{0}") ignored'.format(sid)
+            return False
     
-    node = CommonApplication.getObjectById(sid)
     if not node.isLoaded():
         print 'ERROR: Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid)
         return False
@@ -1018,7 +1103,11 @@ def disable(sid):
     count = node.setIsEnabledWithCount(False)
 
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- {0} \'{1}\' disabled'.format(node.getObjectType().lower(), node.getName())
+        symbolName = node.getHeaderDefinition()
+        if symbolName != None:
+            print '- {0} \'{1}\'/{2} disabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
+        else:
+            print '- {0} \'{1}\' disabled'.format(node.getObjectType().lower(), node.getName())
         
     addToGlobalCount(count)
     
@@ -1027,34 +1116,43 @@ def disable(sid):
 
 def isEnabled(sid):
         
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, isEnabled("{0}") return False'.format(sid)
-        return False
-    
-    node = CommonApplication.getObjectById(sid)
-    
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, isEnabled("{0}") return False'.format(sid)
+            return False
+        
     return node.isEnabled()
 
 
 def isActive(sid):
         
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, isActive("{0}") return False'.format(sid)
-        return False
-    
-    node = CommonApplication.getObjectById(sid)
-    
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, isActive("{0}") return False'.format(sid)
+            return False
+        
     return node.isActive()
 
 
 def valueOf(sid):
         
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, valueOf("{0}") return 0'.format(sid)
-        return False
-    
-    node = CommonApplication.getObjectById(sid)
-    
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, valueOf("{0}") return 0'.format(sid)
+            return False
+        
     return node.getValueWithType()
 
 
@@ -1063,12 +1161,15 @@ def setValue(sid, value):
     if CommonApplication.getVerbosity() > 1:
         print 'setValue("{0}", \'{1}\')'.format(sid, value)
 
-    if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, setValue("{0}") ignored'.format(sid)
-        return False
+    if CommonApplication.isObjectById(sid):
+        node = CommonApplication.getObjectById(sid)
+    else:  
+        if CommonApplication.isObjectBySymbol(sid):
+            node = CommonApplication.getObjectBySymbol(sid)
+        else:  
+            print 'ERROR: Node not found, setValue("{0}") ignored'.format(sid)
+            return False
     
-    node = CommonApplication.getObjectById(sid)
-
     if not node.isConfigurableEvaluated():
         print 'ERROR: Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid)
         return False
@@ -1080,7 +1181,11 @@ def setValue(sid, value):
     count = node.setValueWithCount(value)
     
     if count > 0 and CommonApplication.getVerbosity() > 0:
-        print '- {0} \'{1}\' set to "{2}"'.format(node.getObjectType().lower(), node.getName(), value)
+        symbolName = node.getHeaderDefinition()
+        if symbolName != None:
+            print '- {0} \'{1}\'/{2} set to "{3}"'.format(node.getObjectType().lower(), node.getName(), symbolName, value)
+        else:
+            print '- {0} \'{1}\' set to "{2}"'.format(node.getObjectType().lower(), node.getName(), value)
 
     addToGlobalCount(count)
     

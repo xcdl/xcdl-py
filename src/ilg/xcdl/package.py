@@ -56,12 +56,6 @@ class Package(Component):
         updated += self._treeParent.setIsLoadedRecursive()
         return updated
         
-
-    def getDefaultIsEnabled(self):
-        
-        # packages start as enabled
-        return True
-    
     
     def getBuildIncludeFolders(self):
         

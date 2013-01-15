@@ -119,10 +119,10 @@ class Application(CommonApplication):
             self.packagesAbsolutePathList.extend(repoFolderAbsolutePathList)
             
         print
-        packagesTreesList = self.parseRepositories(self.packagesAbsolutePathList, -1)
+        repositoriesList = self.parseRepositories(self.packagesAbsolutePathList, -1)
 
         print
-        self.dumpTree(packagesTreesList, False)
+        self.dumpTree(repositoriesList, False)
         
         if self.configFilePath != None:
             print
@@ -133,27 +133,32 @@ class Application(CommonApplication):
             configNode = self.loadConfiguration(configTreesList, self.desiredConfigurationId, -1)
 
             print
+            print 'Build preprocessor symbols dictionary...'
+            count = self.processSymbolsDict(repositoriesList)
+            print '- {0} symbol(s) processed.'.format(count)
+
+            print
             print 'Process initial \'isEnabled\' properties'
-            self.processInitialIsEnabled(packagesTreesList)
+            self.processInitialIsEnabled(repositoriesList)
             
             print
             print 'Process \'requires\' properties'
-            self.processRequiresProperties(packagesTreesList, configNode, False)
+            self.processRequiresProperties(repositoriesList, configNode, False)
             
             CommonApplication.clearErrorCount()
-            self.processRequiresProperties(packagesTreesList, configNode, False)
+            self.processRequiresProperties(repositoriesList, configNode, False)
             count = CommonApplication.getErrorCount()
             if count > 0:
                 print '{0} error(s) encountered'.format(count)
             
             print
-            self.dumpTree(packagesTreesList, True)
+            self.dumpTree(repositoriesList, True)
                   
             print
-            self.dumpPreprocessorDefinitions(packagesTreesList) 
+            self.dumpPreprocessorDefinitions(repositoriesList) 
             
             print 
-            self.dumpSourceFiles(packagesTreesList)
+            self.dumpSourceFiles(repositoriesList)
             
         return
 

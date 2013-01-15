@@ -47,12 +47,6 @@ class Interface(Object):
         return
 
     
-    def getDefaultIsEnabled(self):
-        
-        # interfaces start as enabled
-        return True
-
-
     def getDefaultIsConfigurable(self):
         
         # interfaces as non configurable
