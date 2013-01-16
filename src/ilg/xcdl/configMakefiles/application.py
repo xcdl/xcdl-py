@@ -2,33 +2,42 @@
 
 """
 Usage:
-    python -m ilg.xcdl.configMakefiles [options]
+    sh configMakefiles.sh [params]
+    python -m ilg.xcdl.configMakefiles [params]
 
-Options:
+Params:
         
     -c, --config
-        the root configuration file
+        the relative/absolute path to the configuration file. (mandatory)
         
-    -p, --packages
-        the root of the packages tree file, multiple trees accepted
+    -r, --repository
+        the relative/absolute path to the repository folder;
+        multiple repositories accepted.
     
     -i, --id
-        the ID of the configuration to be generated
+        the ID of the configuration to be generated; can be a leaf node 
+        or a subtree to create multiple configurations from a single run.
+        (mandatory)
 
-    -o, --output
-        the output folder
+    -b, --build
+        the output folder, where the build configurations will be created.
+        (mandatory)
+        
+    -t, --toolchain
+        the ID of the toolchain to be used;
+        overwrite the toolchain refered in the configuration with this one.
         
     -l, --linearise
-        linearise the build subfolder
+        linearise the build subfolder to shorten the path.
         
     -v, --verbose
-        print progress output; more increase verbosity
+        print progress output; more occurences increase verbosity.
 
     -h, --help
-        print this message
+        print this message.
         
 Purpose:
-    Create the build folders and the makefiles.
+    Create the build folders with distributed GNU Make files.
     
 """
 
@@ -71,8 +80,8 @@ class Application(CommonApplication):
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'c:p:i:o:t:lhv', 
-                            ['config=', 'packages=', 'id=', 'output=', 
+            (opts, args) = getopt.getopt(self.argv[1:], 'c:r:i:b:t:lhv', 
+                            ['config=', 'repository=', 'id=', 'build=', 
                              'toolchain=', 'linearise', 'help', 'verbose'])
         except getopt.GetoptError as err:
             # print help information and exit:
@@ -83,7 +92,9 @@ class Application(CommonApplication):
         retval = 0
         try:
             if len(args) > 0:
-                print 'unused arguments: ', args
+                print 'Unused arguments: '
+                for arg in args:
+                    print '\t{0}'.format(arg)
                 self.usage()
                 return 2
                     
@@ -91,11 +102,11 @@ class Application(CommonApplication):
                 #a = a
                 if o in ('-c', '--config'):
                     self.configFilePath = a
-                elif o in ('-p', '--packages'):
+                elif o in ('-r', '--repository'):
                     self.packagesAbsolutePathList.append(a)
                 elif o in ('-i', '--id'):
                     self.desiredConfigurationId = a
-                elif o in ('-o', '--output'):
+                elif o in ('-b', '--build'):
                     self.outputFolder = a
                 elif o in ('-t', '--toolchain'):
                     self.toolchainId = a
@@ -127,13 +138,13 @@ class Application(CommonApplication):
     def validate(self):
         
         if self.configFilePath == None:
-            raise ErrorWithDescription('Missing --config parameter')
+            raise ErrorWithDescription('Missing mandatory --config= parameter')
 
         if self.desiredConfigurationId == None:
-            raise ErrorWithDescription('Missing --id parameter')
+            raise ErrorWithDescription('Missing mandatory --id= parameter')
 
         if self.outputFolder == None:
-            raise ErrorWithDescription('Missing --output parameter')
+            raise ErrorWithDescription('Missing mandatory --build= parameter')
                                 
         return
 
@@ -262,7 +273,7 @@ class Application(CommonApplication):
         headersDict = self.buildHeadersDict(repositoriesList)
         for fileRelativePath in headersDict.iterkeys():
             
-            fileAbsolutePath = os.path.join(outputFolder, outputSubFolder, fileRelativePath)
+            fileAbsolutePath = os.path.abspath(os.path.join(outputFolder, outputSubFolder, fileRelativePath))
             if self.verbosity > 1:
                 print fileAbsolutePath
 
@@ -311,7 +322,7 @@ class Application(CommonApplication):
         # iterate all folders
         for folderRelativePath in sourcesDict.iterkeys():
             
-            folderAbsolutePath = os.path.join(outputFolder, outputSubFolder, folderRelativePath)
+            folderAbsolutePath = os.path.abspath(os.path.join(outputFolder, outputSubFolder, folderRelativePath))
             if not os.path.isdir(folderAbsolutePath):
                 if self.verbosity > 1:
                     print('Create folder \'{0}\''.format(folderAbsolutePath))

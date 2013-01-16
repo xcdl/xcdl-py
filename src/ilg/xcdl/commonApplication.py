@@ -148,7 +148,7 @@ class CommonApplication(object):
         
         # build a list of trees, for all given packages
         repositoriesList = []
-                
+        
         for repositoryAbsolutePath in repositoriesAbsolutePathList:
             
             packsList = self.parseRepository(repositoryAbsolutePath, minVerbosity)
@@ -165,7 +165,11 @@ class CommonApplication(object):
         if os.path.isdir(packageAbsolutePath):
             if self.verbosity > minVerbosity:
                 print 'Parse repository folder \'{0}\'...'.format(repoFolderAbsolutePathList)
-            rootList = self.processFolderRecursive(None, packageAbsolutePath)
+            
+            # keep a list of parsed folders to avoid duplicates 
+            parsedFolders = []
+            rootList = self.parseFolderRecursive(None, packageAbsolutePath, parsedFolders)
+            
         elif os.path.isfile(repoFolderAbsolutePathList):
             if self.verbosity > minVerbosity:
                 print 'Parse packages file \'{0}\'....'.format(repoFolderAbsolutePathList)
@@ -221,7 +225,7 @@ class CommonApplication(object):
         return (configTreesList, repoFolderAbsolutePathList)
     
     
-    def processFolderRecursive(self, parent, folderAbsolutePath):
+    def parseFolderRecursive(self, parent, folderAbsolutePath, parsedFolders):
         
         crtParent = parent
         localList = []
@@ -231,9 +235,13 @@ class CommonApplication(object):
                 if self.verbosity > 2:
                     print 'is package'
                 
-                packageLocation = PackageLocation(folderAbsolutePath, tentativeFileAbsolutePath)
-                localList = self.parseScript(parent, tentativeFileAbsolutePath, packageLocation)
-                crtParent = localList[0]
+                (tentativeFolderAbsolutePath,_) = os.path.split(tentativeFileAbsolutePath)
+                if tentativeFolderAbsolutePath not in parsedFolders:
+                    packageLocation = PackageLocation(folderAbsolutePath, tentativeFileAbsolutePath)
+                    localList = self.parseScript(parent, tentativeFileAbsolutePath, packageLocation)
+                    if len(localList) > 0:
+                        crtParent = localList[0]
+                    parsedFolders.append(tentativeFolderAbsolutePath)
                 break
                  
         for name in os.listdir(folderAbsolutePath):
@@ -241,15 +249,15 @@ class CommonApplication(object):
             if os.path.isdir(absolutePath):
                 if self.verbosity > 2:
                     print 'subfolder {0}'.format(absolutePath)
-                self.processFolderRecursive(crtParent, absolutePath)
+                self.parseFolderRecursive(crtParent, absolutePath, parsedFolders)
         
         return localList
     
     
     def parseScript(self, parent, scriptAbsolutePath, packageLocation):
         
-        if self.verbosity > 1:
-            print 'parse file {0}'.format(scriptAbsolutePath)
+        if self.verbosity > 0:
+            print '- parse file {0}'.format(scriptAbsolutePath)
         
         # list used to collect all objects contributed by encountered 
         # constructors
@@ -259,12 +267,12 @@ class CommonApplication(object):
         if not os.path.isfile(scriptAbsolutePath):
             raise ErrorWithDescription('Missing script file \'{0}\''.
                                        format(scriptAbsolutePath))
-
+        
         try:
             execfile(scriptAbsolutePath)
         except BaseException as err:
             raise ErrorWithDescription('\'{0}\' in file \'{1}\''.format(err, scriptAbsolutePath))
-        
+                
         self.warnNonParsedKeywords(localList)
         
         # manual links to children or to parent
@@ -452,9 +460,9 @@ class CommonApplication(object):
     def dumpTree(self, repositoriesList, isLoaded):
         
         if not isLoaded:
-            print "The packages trees:"
+            print "The repositories full trees:"
         else:
-            print "The loaded packages trees:"
+            print "The loaded repositories nodes:"
         
         print
         for tree in repositoriesList:
@@ -593,8 +601,7 @@ class CommonApplication(object):
     def loadConfiguration(self, configTreesList, sid, minVerbosity):
         
         if not CommonApplication.isObjectById(sid):
-            print 'Missing id=\'{0}\', cancelled'.format(sid)
-            return
+            raise ErrorWithDescription('Missing configuration node id=\'{0}\', cancelled'.format(sid))
         
         configNode = CommonApplication.getObjectById(sid)
         if self.verbosity > minVerbosity:
