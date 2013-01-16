@@ -20,6 +20,9 @@ class Toolchain(Object):
         
         'linkerMiscOptions',
         
+        'programNamePrefix',
+        'programNameSuffix',
+
         'makeObjectsVariable',
     ]
     
@@ -47,7 +50,13 @@ class Toolchain(Object):
         self._toolsDict = {}
         for key in ['cc', 'cpp', 'ld', 'asm']:
             if key in self._kwargs:
-                self._toolsDict[key] = self._kwargs[key]
+                tool = self._kwargs[key]
+                
+                # store a link back to the toolchain in each tool
+                tool.setToolchain(self)
+                tool.setToolName(key)
+                
+                self._toolsDict[key] = tool
                 del self._kwargs[key]
 
         self._properties = {}
@@ -124,14 +133,68 @@ class Toolchain(Object):
             return parentNode.getPropertyRecursive(key)
         
         return None
+
     
+    def getToolProgramNameRecursive(self, key):
+        
+        if key in self._toolsDict:
+            tool = self._toolsDict[key]
+            if tool != None:
+                programName = tool.getProgramName()
+                if programName != None:
+                    return programName
+                    
+        parentNode = self.getTreeParent()
+        if parentNode == None:
+            return None
+        
+        return parentNode.getToolProgramNameRecursive(key)
 
 
+    def getToolProgramNameRecursiveWithSubstitutions(self, key):
+        
+        programName = self.getToolProgramNameRecursive(key)
+        
+        if programName.find('$(PREFIX)') != -1:
+            prefix = self.getPropertyRecursive('programNamePrefix')
+            if prefix == None:
+                prefix=''
+                
+            programName = programName.replace('$(PREFIX)', prefix)
+
+        if programName.find('$(SUFFIX)') != -1:
+            suffix = self.getPropertyRecursive('programNameSuffix')
+            if suffix == None:
+                suffix = ''
+                
+            programName = programName.replace('$(SUFFIX)', suffix)
+
+        return programName
+
+
+    def getToolDescriptionRecursive(self, key):
+        
+        if key in self._toolsDict:
+            tool = self._toolsDict[key]
+            if tool != None:
+                description = tool.getDescription()
+                if description != None:
+                    return description
+                    
+        parentNode = self.getTreeParent()
+        if parentNode == None:
+            return None
+        
+        return parentNode.getToolDescriptionRecursive(key)
+
+        
 class Tool():
     
     def __init__(self, **kwargs):
 
         self._kwargs = kwargs
+        self._toolchain = None;
+        self._toolName = None
         
         key = 'programName'
         if key in self._kwargs:
@@ -156,10 +219,27 @@ class Tool():
         return
 
 
+    def setToolchain(self, toolchain):
+        
+        self._toolchain = toolchain
+        return
+
+
+    def setToolName(self, name):
+        
+        self._toolName = name
+        return
+
+
+    def getToolchain(self):
+        
+        return self._toolchain
+
+
     def getProgramName(self):
         
         return self._programName
-    
+
     
     def getDescription(self):
         

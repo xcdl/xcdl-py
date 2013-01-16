@@ -397,13 +397,17 @@ class Application(CommonApplication):
         if makeObjectsVariable == None:
             makeObjectsVariable = 'OBJS'    # default make variable name
  
+        compilerObjectsExtension = toolchainNode.getPropertyRecursive('compilerObjectsExtension')
+        if compilerObjectsExtension == None:
+            compilerObjectsExtension = 'o'
+            
         if len(allList) > 0:
             f.write('{0} += \\\n'.format(makeObjectsVariable))
             
             for e in allList:
                 fileNameComplete = e['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
+                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
                 f.write(self.expandPathSpaces(p))
                 f.write(' \\\n')
             f.write('\n')
@@ -447,7 +451,7 @@ class Application(CommonApplication):
             for e in allList:
                 fileNameComplete = e['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 'bc'))
+                p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
                 sourceAbsolutePath = e['sourceAbsolutePath']
                 f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
                 f.write('\t@echo \'Compiling XCDL file: $<\'\n')
@@ -460,7 +464,7 @@ class Application(CommonApplication):
                         toolName = 'g++'
                         toolDesc = 'GNU default g++'
                     else:
-                        toolName = tool.getProgramName()
+                        toolName = toolchainNode.getToolProgramNameRecursiveWithSubstitutions('cpp')
                         if toolName == None:
                             print 'WARN: Missing \'programName\' in tool \'cpp\', toolchain \'{0}\', using default \'g++\''.format(toolchainNode.getName())                      
                             toolName = 'g++'
@@ -476,7 +480,7 @@ class Application(CommonApplication):
                         toolName = 'gcc'
                         toolDesc = 'GNU default gcc'
                     else:
-                        toolName = tool.getProgramName()
+                        toolName = toolchainNode.getToolProgramNameRecursiveWithSubstitutions('cc')
                         if toolName == None:
                             print 'WARN: Missing \'programName\' in tool \'cc\', toolchain \'{0}\', using default \'gcc\''.format(toolchainNode.getName())                      
                             toolName = 'gcc'
@@ -492,7 +496,7 @@ class Application(CommonApplication):
                         toolName = 'gcc'
                         toolDesc = 'GNU default gcc'
                     else:
-                        toolName = tool.getProgramName()
+                        toolName = toolchainNode.getToolProgramNameRecursiveWithSubstitutions('asm')
                         if toolName == None:
                             print 'WARN: Missing \'programName\' in tool \'asm\', toolchain \'{0}\', using default \'gcc\''.format(toolchainNode.getName())                      
                             toolName = 'gcc'
@@ -505,7 +509,7 @@ class Application(CommonApplication):
                     #print '- compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
                     eList = e['buildPathList']
                     ePath = os.path.join(os.sep.join(eList[1:]), fileNameComplete)
-                    print '- compile {0} \'{1}\''.format(eList[0], ePath)
+                    print '- compile {0} \'{1}\' with \'{2}\''.format(eList[0], ePath, toolDesc)
 
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
@@ -686,7 +690,7 @@ class Application(CommonApplication):
             toolPgmName = 'g++'
         else:           
             toolDesc = tool.getDescription()
-            toolPgmName = tool.getProgramName()
+            toolPgmName = toolchainNode.getToolProgramNameRecursiveWithSubstitutions('ld')
         
         makeObjectsVariable = toolchainNode.getPropertyRecursive('makeObjectsVariable')
         if makeObjectsVariable == None:
