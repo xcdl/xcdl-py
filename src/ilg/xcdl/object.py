@@ -37,10 +37,13 @@ class Object(object):
         self._treeChildrenList = None
         self._basePath = None        
         self._packageLocation = None
+
+        # can be set only in Repository object
+        self._sourcesPathsList = None
         
         # ---------------------------------------------------------------------
         # main properties id, name, description
-        # store given values
+
         self._id = None
         key = 'id'
         if key in self._kwargs:
@@ -65,6 +68,18 @@ class Object(object):
         else:
             raise ErrorWithDescription('Mandatory description missing, id=\'{0}\''.format(self._id))
                 
+        # ---------------------------------------------------------------------
+        # hierarchy related properties
+
+        key = 'parent'
+        self._parentId = None
+        if key in self._kwargs:
+            self._parentId = self._kwargs[key]
+            del self._kwargs[key]
+
+        # ---------------------------------------------------------------------
+        # source files associated to this object
+
         key = 'sourceFiles'
         self._sourceFilesList = None
         if key in self._kwargs:
@@ -72,9 +87,8 @@ class Object(object):
             del self._kwargs[key]
 
         # ---------------------------------------------------------------------
+        # status properties
             
-        #self.isConfigurable = self.getDefaultIsConfigurable()
-
         key='isConfigurable'
         self._isConfigurableExpression = None
         if key in self._kwargs:
@@ -90,49 +104,69 @@ class Object(object):
             self._initialIsEnabled = self._kwargs[key]
             del self._kwargs[key]
             
+            # if the value is a constant, apply it here
             if isinstance(self._initialIsEnabled, bool):
                 self._isEnabled = self._initialIsEnabled
 
+        # ---------------------------------------------------------------------
+        # value related properties
+        
         key='valueType'
         self._valueType = None
         if key in self._kwargs:
             # none, bool, number, string
             val = self._kwargs[key]
             if val not in ['none', 'bool', 'int', 'float', 'string']:
-                print 'ERROR: Unsupported valueType \'{0}\' using \'none\' in node \'{1}\''.format(val, self._id)
-            
-            self._valueType = self._kwargs[key]
+                print 'ERROR: Unsupported valueType \'{0}\', defaulting to \'none\' in node \'{1}\''.format(val, self._id)
+                self._valueType = 'none'
+            else:
+                self._valueType = self._kwargs[key]
             del self._kwargs[key]
         
         self._value = None
         
+        key='computed'
+        self._computedExpression = None
+        if key in self._kwargs:
+            if self._valueType == None or self._valueType == 'none':
+                print 'ERROR: Node {0} has no value, \'computed\' ignored'.format(self._id)
+            else:
+                self._computedExpression = self._kwargs[key]
+                
+            del self._kwargs[key]
+
+        key='defaultValue'
+        self._defaultValueExpression = None
+        if key in self._kwargs:
+            if self._computedExpression != None:
+                print 'ERROR: Node {0} already has a compute, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
+            else:
+                if self._valueType == None or self._valueType == 'none':
+                    print 'ERROR: Node {0} has no value, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
+                else:
+                    self._defaultValueExpression = self._kwargs[key]
+                
+            del self._kwargs[key]
+
+        key='legalValues'
+        self._legalValuesList = None
+        if key in self._kwargs:
+            if self._valueType == None or self._valueType == 'none':
+                print 'ERROR: Node {0} has no value, \'legalValues\' ignored'.format(self._id)
+            else:
+                self._legalValuesList = self._kwargs[key]
+                
+            del self._kwargs[key]
+
         key='valueFormat'
         self._valueFormat = None
         if key in self._kwargs:
             self._valueFormat = self._kwargs[key]
             del self._kwargs[key]
-                        
-        key='computed'
-        self._computedExpression = None
-        if key in self._kwargs:
-            self._computedExpression = self._kwargs[key]
-            del self._kwargs[key]
+                                    
+        # ---------------------------------------------------------------------
+        # constraints related properties
 
-        key='defaultValue'
-        self._defaultValueExpression = None
-        if self._computedExpression != None:
-            print 'ERROR: Node {0} already has a compute, \‘defaultValue\' ignored'.format(self._id)
-        else:
-            if key in self._kwargs:
-                self._defaultValueExpression = self._kwargs[key]
-                del self._kwargs[key]
-
-        key='legalValues'
-        self._legalValuesList = None
-        if key in self._kwargs:
-            self._legalValuesList = self._kwargs[key]
-            del self._kwargs[key]
-            
         key='activeIf'
         self._activeIfList = None
         if key in self._kwargs:
@@ -152,6 +186,7 @@ class Object(object):
             del self._kwargs[key]
             
         # ---------------------------------------------------------------------
+        # header related properties
 
         key = 'headerFile'
         self._headerFile = None
@@ -166,6 +201,7 @@ class Object(object):
             del self._kwargs[key]
 
         # ---------------------------------------------------------------------
+        # grouping
 
         key = 'category'
         self._category = None
@@ -173,14 +209,8 @@ class Object(object):
             self._category = self._kwargs[key]
             del self._kwargs[key]
 
-        key = 'parent'
-        self._parentId = None
-        if key in self._kwargs:
-            self._parentId = self._kwargs[key]
-            del self._kwargs[key]
-
-        # can be set only in Repository object
-        self._sourcesPathsList = None
+        # ---------------------------------------------------------------------
+        # other?
         
         return
 
@@ -217,6 +247,7 @@ class Object(object):
         
     # -------------------------------------------------------------------------
     # main properties id, name, description
+    
     def getId(self):
         
         return self._id
@@ -235,6 +266,7 @@ class Object(object):
     
     # -------------------------------------------------------------------------
     # tree links
+    
     def setTreeParent(self, parent):
         
         self._treeParent = parent
@@ -595,11 +627,13 @@ class Object(object):
         
     def computeSingleActiveIf(self, activeIf):
         
+        # TODO: implement
         return True
     
 
     def computeSingleRequires(self, requires):
         
+        # TODO: implement
         return True
     
     
