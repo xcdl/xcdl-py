@@ -134,6 +134,38 @@ class Toolchain(Object):
         
         return None
 
+
+    def getPropertyRecursiveWithDefault(self, key):
+        
+        value = self.getPropertyRecursive(key)
+        if value != None:
+            return value
+        
+        # here must supply an appropriate default
+        if key == 'makeObjectsVariable':
+            return 'OBJS'
+        elif key == 'compilerObjectsExtension':
+            return 'o'
+        elif key == 'linkerMiscOptions':
+            return ''
+        elif key == 'compilerInputOptions':
+            return '"$<"'
+        elif key == 'compilerOutputOptions':
+            return '-o "$@"'
+        elif key == 'compilerDepsOptions':
+            return '-MMD -MP'
+        elif key == 'compilerMiscOptions':
+            return '-fmessage-length=0 -c'
+        elif key == 'compilerWarningOptions':
+            return '-Wall'
+        elif key == 'compilerDebugOptions':
+            return '-g'
+        elif key == 'compilerOptimisationOptions':
+            return '-O'
+        
+        return None
+        
+    # Tool related methods
     
     def getToolProgramNameRecursive(self, key):
         

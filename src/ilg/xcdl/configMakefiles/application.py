@@ -352,7 +352,6 @@ class Application(CommonApplication):
         f = open(subdirAbsolutePath, 'w')
         
         self.generateDoNotEditMessage(f)
-        f.write('# Add inputs and outputs from these tool invocations to the build variables\n')
         
         sources = sourcesDict[folderRelativePath]
         
@@ -360,104 +359,32 @@ class Application(CommonApplication):
         cList = self.groupSourceFilesByType(sources, ['.c'])
         sList = self.groupSourceFilesByType(sources, ['.S'])
                 
-        if len(cppList) > 0:
-            f.write('CPP_SRCS += \\\n')
-            
-            for e in cppList:
-                p = e['sourceAbsolutePath']
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-
-        if len(cList) > 0:
-            f.write('C_SRCS += \\\n')
-            
-            for e in cList:
-                p = e['sourceAbsolutePath']
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-        
-        if len(sList) > 0:
-            f.write('S_SRCS += \\\n')
-            
-            for e in sList:
-                p = e['sourceAbsolutePath']
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-        
-
         allList = []
         allList.extend(cppList)
         allList.extend(cList)
         allList.extend(sList)
         
-        makeObjectsVariable = toolchainNode.getPropertyRecursive('makeObjectsVariable')
-        if makeObjectsVariable == None:
-            makeObjectsVariable = 'OBJS'    # default make variable name
+        makeObjectsVariable = toolchainNode.getPropertyRecursiveWithDefault('makeObjectsVariable')
  
-        compilerObjectsExtension = toolchainNode.getPropertyRecursive('compilerObjectsExtension')
-        if compilerObjectsExtension == None:
-            compilerObjectsExtension = 'o'
+        compilerObjectsExtension = toolchainNode.getPropertyRecursiveWithDefault('compilerObjectsExtension')
             
-        if len(allList) > 0:
-            f.write('{0} += \\\n'.format(makeObjectsVariable))
-            
-            for e in allList:
-                fileNameComplete = e['fileName']
-                (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-
-        if len(cppList) > 0:
-            f.write('CPP_DEPS += \\\n')
-            
-            for e in cppList:
-                fileNameComplete = e['fileName']
-                (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-
-        if len(cList) > 0:
-            f.write('C_DEPS += \\\n')
-            
-            for e in cList:
-                fileNameComplete = e['fileName']
-                (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-
-        if len(sList) > 0:
-            f.write('S_DEPS += \\\n')
-            
-            for e in sList:
-                fileNameComplete = e['fileName']
-                (fileName, _) = os.path.splitext(fileNameComplete)
-                p = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
-                f.write(self.expandPathSpaces(p))
-                f.write(' \\\n')
-            f.write('\n')
-
         if len(allList) > 0:
             f.write('# Each subdirectory must supply rules for building sources it contributes\n')
+            f.write('\n')
+            f.write('# For each source add to the build variables all inputs and outputs that these tools contribute\n')
+            f.write('\n')
                
-            for e in allList:
-                fileNameComplete = e['fileName']
+            for source in allList:
+                fileNameComplete = source['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
+                
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
-                sourceAbsolutePath = e['sourceAbsolutePath']
-                f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
-                f.write('\t@echo \'Compiling XCDL file: $<\'\n')
+                sourceAbsolutePath = source['sourceAbsolutePath']
                                    
-                fType = e['type']
+                fType = source['type']
                 if fType == '.cpp':
+                    typeDeps = 'CPP_DEPS'
+                    typeSrcs = 'CPP_SRCS'
                     tool = toolchainNode.getToolRecursive('cpp')
                     if tool == None:
                         print 'WARN: Missing \'cpp\' tool in toolchain \'{0}\', using defaults'.format(toolchainNode.getName())                      
@@ -474,6 +401,8 @@ class Application(CommonApplication):
                             toolDesc = 'GNU default g++'
                         
                 elif fType == '.c':
+                    typeDeps = 'C_DEPS'
+                    typeSrcs = 'C_SRCS'
                     tool = toolchainNode.getToolRecursive('cc')
                     if tool == None:                        
                         print 'WARN: Missing \'cc\' tool in toolchain \'{0}\', using defaults'.format(toolchainNode.getName())                      
@@ -490,6 +419,8 @@ class Application(CommonApplication):
                             toolDesc = 'GNU default gcc'
                 
                 elif fType == '.S':
+                    typeDeps = 'S_DEPS'
+                    typeSrcs = 'S_SRCS'
                     tool = toolchainNode.getToolRecursive('asm')
                     if tool == None:                        
                         print 'WARN: Missing \'asm\' tool in toolchain \'{0}\', using defaults'.format(toolchainNode.getName())                      
@@ -504,12 +435,36 @@ class Application(CommonApplication):
                         if toolDesc == None:
                             print 'WARN: Missing \'description\' in tool \'asm\', toolchain \'{0}\', using default \'GNU default gcc\''.format(toolchainNode.getName())                      
                             toolDesc = 'GNU default gcc'
+ 
+                node = source['repoNode']
+                linkPriority = node.getLinkPriority()
+               
+                objectRelativePath = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))                
+                prio = ''
+                if linkPriority != None:
+                    prio = '_{0:02d}'.format(linkPriority)
                 
+                f.write('{0}{1} += {2}\n'.format(makeObjectsVariable, prio, self.expandPathSpaces(objectRelativePath)))
+            
+                f.write('{0} += {1}\n'.format(typeSrcs, self.expandPathSpaces(sourceAbsolutePath)))
+
+                depsRelativePath = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
+                f.write('{0} += {1}\n'.format(typeDeps, self.expandPathSpaces(depsRelativePath)))
+
+                f.write('\n')
+
                 if self.verbosity > 0:
                     #print '- compile \'{0}\' with \'{1}\''.format(sourceAbsolutePath, toolDesc)
-                    eList = e['buildPathList']
+                    eList = source['buildPathList']
+                    extra = ''
+                    if linkPriority != None:
+                        extra += ', linkPriority={0}'.format(linkPriority)
+                        
                     ePath = os.path.join(os.sep.join(eList[1:]), fileNameComplete)
-                    print '- compile {0} \'{1}\' with \'{2}\''.format(eList[0], ePath, toolDesc)
+                    print '- compile {0} \'{1}\' with \'{2}\'{3}'.format(eList[0], ePath, toolDesc, extra)
+
+                f.write('{0}: {1}\n'.format(self.expandPathSpaces(p), self.expandPathSpaces(sourceAbsolutePath)))
+                f.write('\t@echo \'Compiling XCDL file: $<\'\n')
 
                 f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
                 
@@ -521,43 +476,29 @@ class Application(CommonApplication):
                         f.write(' -D{0}'.format(preprocessorSymbol))
                 
                 buildFolderAbsolutePath=os.path.abspath(os.path.join(outputFolder, outputSubFolder))
-                includeAbsolutePathList = self.computeIncludeAbsolutePathList(e['repoNode'], fileNameComplete, buildFolderAbsolutePath)
+                includeAbsolutePathList = self.computeIncludeAbsolutePathList(source['repoNode'], fileNameComplete, buildFolderAbsolutePath)
                 for includeAbsolutePath in includeAbsolutePathList:
                     f.write(' -I"{0}"'.format(includeAbsolutePath))
                 
                 compilerOptimisationOptions = toolchainNode.getPropertyRecursive('compilerOptimisationOptions')
-                if compilerOptimisationOptions == None:
-                    compilerOptimisationOptions = '-O'
                 f.write(' {0}'.format(compilerOptimisationOptions))
                 
                 compilerDebugOptions = toolchainNode.getPropertyRecursive('compilerDebugOptions')
-                if compilerDebugOptions == None:
-                    compilerDebugOptions = '-g'
                 f.write(' {0}'.format(compilerDebugOptions))
                     
                 compilerWarningOptions = toolchainNode.getPropertyRecursive('compilerWarningOptions')
-                if compilerWarningOptions == None:
-                    compilerWarningOptions = '-Wall'
                 f.write(' {0}'.format(compilerWarningOptions))
 
                 compilerMiscOptions = toolchainNode.getPropertyRecursive('compilerMiscOptions')
-                if compilerMiscOptions == None:
-                    compilerMiscOptions = '-fmessage-length=0 -c'
                 f.write(' {0}'.format(compilerMiscOptions))
                     
                 compilerDepsOptions = toolchainNode.getPropertyRecursive('compilerDepsOptions')
-                if compilerDepsOptions == None:
-                    compilerDepsOptions = '-MMD -MP'
                 f.write(' {0}'.format(compilerDepsOptions))
                     
-                compilerOutputOptions = toolchainNode.getPropertyRecursive('compilerOutputOptions')
-                if compilerOutputOptions == None:
-                    compilerOutputOptions = '-o "$@"'
+                compilerOutputOptions = toolchainNode.getPropertyRecursiveWithDefault('compilerOutputOptions')
                 f.write(' {0}'.format(compilerOutputOptions))
 
-                compilerInputOptions = toolchainNode.getPropertyRecursive('compilerInputOptions')
-                if compilerInputOptions == None:
-                    compilerInputOptions = '"$<"'
+                compilerInputOptions = toolchainNode.getPropertyRecursiveWithDefault('compilerInputOptions')
                 f.write(' {0}'.format(compilerInputOptions))
 
                 f.write('\n')
@@ -643,24 +584,60 @@ class Application(CommonApplication):
         
         self.generateDoNotEditMessage(f)
 
+        makeObjectsVariable = toolchainNode.getPropertyRecursiveWithDefault('makeObjectsVariable')
+
+        objectsVariablesList = ''
+        # eventually generate objects, ordered by priorities
+        prioritiesList = self.getPrioritiesList(sourcesDict)
+        for priority in prioritiesList:
+            objectsVariablesList += '$({0}_{1:02d}) '.format(makeObjectsVariable, priority)
+
+        objectsVariablesList += '$({0}) '.format(makeObjectsVariable)
+            
         f.write('\n')
         f.write('-include ../makefile.init\n')        
         f.write('\n')
         f.write('-RM := {0} -rf\n'.format('rm'))        
         f.write('\n')
 
-        f.write('# All Target\n')
+        f.write('# The default target\n')
         f.write('all: {0} secondary-outputs\n'.format(artifactFileName))
         f.write('\n')
 
-        f.write('# All of the sources participating in the build are defined here\n')        
-        f.write('-include sources.mk\n')
+        f.write('# Initialise variables to collect sources\n')              
+        f.write('CPP_SRCS :=\n')
+        f.write('C_SRCS :=\n')
+        f.write('S_SRCS :=\n')
+        f.write('\n')
+        f.write('# Initialise variables to collect dependencies\n')
+        f.write('CPP_DEPS :=\n')
+        f.write('C_DEPS :=\n')
+        f.write('S_DEPS :=\n')
+        f.write('\n')
+        f.write('# Initialise variables to collect objects\n')
+        for priority in prioritiesList:
+            f.write('{0}_{1:02d} :=\n'.format(makeObjectsVariable, priority))
+        f.write('{0} :=\n'.format(makeObjectsVariable))        
+        f.write('\n')
+
+        # TODO: check why this is needed
+        f.write('# Subfolders with source files\n')
+        f.write('SUBDIRS := \\\n')
+
+        for folder in sourcesDict.iterkeys():
+            f.write('{0} \\\n'.format(self.expandPathSpaces(folder)))        
+        f.write('\n')
         
+        f.write('# Include subfolder build definitions\n')
         for folder in sourcesDict.iterkeys():
             subdirMkRelativePath = os.path.join(folder, 'subdir.mk')
             f.write('-include {0}\n'.format(self.expandPathSpaces(subdirMkRelativePath)))        
 
-        f.write('-include objects.mk\n')
+        f.write('\n')
+
+        f.write('USER_OBJS :=\n')
+        f.write('LIBS :=\n')
+        f.write('CUSTOM_EXECUTABLES :=\n')
         f.write('\n')
 
         f.write('ifneq ($(MAKECMDGOALS),clean)\n')
@@ -692,25 +669,24 @@ class Application(CommonApplication):
             toolDesc = tool.getDescription()
             toolPgmName = toolchainNode.getToolProgramNameRecursiveWithSubstitutions('ld')
         
-        makeObjectsVariable = toolchainNode.getPropertyRecursive('makeObjectsVariable')
-        if makeObjectsVariable == None:
-            makeObjectsVariable = 'OBJS'    # default make variable name
-            
-        linkerMiscOptions = toolchainNode.getPropertyRecursive('linkerMiscOptions')
-        if linkerMiscOptions == None:
-            linkerMiscOptions = ''          # empty default misc options
+        linkerMiscOptions = toolchainNode.getPropertyRecursiveWithDefault('linkerMiscOptions')
             
         toolOptions = tool.getOptions()
         if toolOptions == None:
             toolOptions = ''                # empty default tool options
-            
+
         f.write('# Tool invocations\n')
-        f.write('{0}: $({1}) $(USER_OBJS)\n'.format(artifactFileName, makeObjectsVariable))
+        f.write('{0}: {1}$(USER_OBJS)\n'.format(artifactFileName, objectsVariablesList))
         f.write('\t@echo \'Linking XCDL target: $@\'\n')
         f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
-        f.write('\t{0} {1} {2} -o "{3}" $({4}) $(USER_OBJS) $(LIBS)\n'.format(
+        
+        f.write('\t{0} {1} {2} -o "{3}" '.format(
                             toolPgmName, linkerMiscOptions, toolOptions,
-                            artifactFileName, makeObjectsVariable))
+                            artifactFileName))
+                
+        f.write(objectsVariablesList)
+        f.write('$(USER_OBJS) $(LIBS)\n')
+        
         f.write('\t@echo \'Finished linking target: $@\'\n')
         f.write('\t@echo \' \'\n')
         f.write('\n')
@@ -720,7 +696,7 @@ class Application(CommonApplication):
 
         f.write('# Other Targets\n')
         f.write('clean:\n')
-        f.write('\t-$(RM) $({0}) $(CPP_DEPS) $(C_DEPS) $(S_DEPS) $(CUSTOM_EXECUTABLES) {1}\n'.format(makeObjectsVariable, artifactFileName))
+        f.write('\t-$(RM) {0}$(CPP_DEPS) $(C_DEPS) $(S_DEPS) $(CUSTOM_EXECUTABLES) {1}\n'.format(objectsVariablesList, artifactFileName))
         f.write('\t@echo \' \'\n')
         f.write('\n')
         
@@ -735,62 +711,23 @@ class Application(CommonApplication):
         f.write('\n')
         
         f.close()
-
-        # ---------------------------------------------------------------------
-        
-        objectsMkAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'objects.mk')
-        
-        if self.verbosity > 0:
-            if not os.path.isfile(objectsMkAbsolutePath):
-                print('Write file \'{0}\''.format(objectsMkAbsolutePath))
-            else:
-                print('Overwrite file \'{0}\''.format(objectsMkAbsolutePath))
-
-        f = open(objectsMkAbsolutePath, 'w')
-        
-        self.generateDoNotEditMessage(f)
-
-        f.write('USER_OBJS :=\n')
-        f.write('\n')
-
-        f.write('LIBS :=\n')
-        f.write('\n')
-
-        f.close()
-        
-        # ---------------------------------------------------------------------
-        
-        sourcesMkAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'sources.mk')
-        
-        if self.verbosity > 0:
-            if not os.path.isfile(sourcesMkAbsolutePath):
-                print('Write file \'{0}\''.format(sourcesMkAbsolutePath))
-            else:
-                print('Overwrite file \'{0}\''.format(sourcesMkAbsolutePath))
-
-        f = open(sourcesMkAbsolutePath, 'w')
-        
-        self.generateDoNotEditMessage(f)
-
-        f.write('CPP_SRCS :=\n')
-        f.write('C_SRCS :=\n')
-        f.write('S_SRCS :=\n')
-        f.write('CPP_DEPS :=\n')
-        f.write('C_DEPS :=\n')
-        f.write('S_DEPS :=\n')
-        f.write('CUSTOM_EXECUTABLES :=\n')
-        f.write('\n')
-
-        f.write('# Every subdirectory with source files must be described here\n')
-        f.write('SUBDIRS := \\\n')
-
-        for folder in sourcesDict.iterkeys():
-            f.write('{0} \\\n'.format(self.expandPathSpaces(folder)))        
-        f.write('\n')
-
-        f.close()
-        
         
         return
+    
+    
+    def getPrioritiesList(self, sourcesDict):
+        
+        prioritiesDict = {}
+        
+        # enumerate all sources, search for linkPriority and add it to a dict
+        for key in sourcesDict.iterkeys():
+            for source in sourcesDict[key]:
+                node = source['repoNode']
+                linkPriority = node.getLinkPriority()
+                if linkPriority != None:
+                    prioritiesDict[linkPriority] = None
+        
+        # sort priorities            
+        return sorted(prioritiesDict.keys())
     
     

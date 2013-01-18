@@ -78,13 +78,31 @@ class Object(object):
             del self._kwargs[key]
 
         # ---------------------------------------------------------------------
-        # source files associated to this object
+        # build related properties
 
         key = 'sourceFiles'
         self._sourceFilesList = None
         if key in self._kwargs:
             self._sourceFilesList = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'linkPriority'
+        self._linkPriority = None
+        if key in self._kwargs:
+            if self._sourceFilesList == None or len(self._sourceFilesList) == 0:
+                print 'ERROR: Node {0} has no source files, \'linkPriority\' ignored'.format(self._id)
+            else:
+                try:
+                    n = int(self._kwargs[key])
+                    if 0 <= n and n <= 99:
+                        self._linkPriority = n
+                    else:
+                        print 'ERROR: \'linkPriority\' not in [00-99], ignored, Node {0}'.format(self._id)
+                except:
+                    print 'ERROR: \'linkPriority\' not a number, ignored, Node {0}'.format(self._id)
+                                    
+            del self._kwargs[key]
+
 
         # ---------------------------------------------------------------------
         # status properties
@@ -705,5 +723,9 @@ class Object(object):
             return eval(self._isConfigurableExpression)
         else:
             return True if self._isConfigurableExpression else False
+
         
+    def getLinkPriority(self):
+        
+        return self._linkPriority
     
