@@ -797,11 +797,11 @@ class CommonApplication(object):
                             break
                         
                     if foundSourcePath == None:
-                        print 'not found'
+                        print 'ERROR: source file: \'{0}\' not found'.format(sourceFile)
                         continue
                     
                     if not sourceAbsolutePath.startswith(rootPackageFolder):
-                        print 'paths do not match'
+                        print 'ERROR: paths do not match'
                         continue
                     
                     subPath = sourceAbsolutePath[len(rootPackageFolder)+1:]

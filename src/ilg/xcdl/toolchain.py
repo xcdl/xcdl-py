@@ -17,6 +17,7 @@ class Toolchain(Object):
         'compilerMiscOptions',
         'compilerDebugOptions',
         'compilerOptimisationOptions',
+        'compilerCpu',
         
         'linkerMiscOptions',
         

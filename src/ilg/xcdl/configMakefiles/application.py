@@ -480,6 +480,10 @@ class Application(CommonApplication):
                 for includeAbsolutePath in includeAbsolutePathList:
                     f.write(' -I"{0}"'.format(includeAbsolutePath))
                 
+                compilerCpu = toolchainNode.getPropertyRecursive('compilerCpu')
+                if compilerCpu != None:
+                    f.write(' {0}'.format(compilerCpu))
+
                 compilerOptimisationOptions = toolchainNode.getPropertyRecursive('compilerOptimisationOptions')
                 f.write(' {0}'.format(compilerOptimisationOptions))
                 
@@ -680,11 +684,19 @@ class Application(CommonApplication):
         f.write('\t@echo \'Linking XCDL target: $@\'\n')
         f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
         
-        f.write('\t{0} {1} {2} -o "{3}" '.format(
-                            toolPgmName, linkerMiscOptions, toolOptions,
-                            artifactFileName))
+        f.write('\t{0}'.format(toolPgmName));
+        compilerCpu = toolchainNode.getPropertyRecursive('compilerCpu')
+        if compilerCpu != None:
+            f.write(' {0}'.format(compilerCpu))
+
+        compilerDebugOptions = toolchainNode.getPropertyRecursive('compilerDebugOptions')
+        f.write(' {0}'.format(compilerDebugOptions))
+            
+        f.write(' {0}'.format(linkerMiscOptions))
+        f.write(' {0}'.format(toolOptions))
+        f.write(' -o "{0}"'.format(artifactFileName))
                 
-        f.write(objectsVariablesList)
+        f.write(' {0}'.format(objectsVariablesList))
         f.write('$(USER_OBJS) $(LIBS)\n')
         
         f.write('\t@echo \'Finished linking target: $@\'\n')
