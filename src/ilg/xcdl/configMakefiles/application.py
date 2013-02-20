@@ -225,7 +225,7 @@ class Application(CommonApplication):
 
         if self.verbosity > 0:
             print
-            print 'Process the \'requires\' properties...'
+            print 'Process the \'requirements\' properties...'
         self.processRequiresProperties(repositoriesList, configNode, False)
 
         # and one more time, to report remaining errors
@@ -474,7 +474,10 @@ class Application(CommonApplication):
                 if preprocessorSymbolsList != None:
                     for preprocessorSymbol in preprocessorSymbolsList:
                         f.write(' -D{0}'.format(preprocessorSymbol))
-                
+
+                compilerPreprocessorOptions = toolchainNode.getPropertyRecursive('compilerPreprocessorOptions')
+                f.write(' {0}'.format(compilerPreprocessorOptions))
+                                    
                 buildFolderAbsolutePath=os.path.abspath(os.path.join(outputFolder, outputSubFolder))
                 includeAbsolutePathList = self.computeIncludeAbsolutePathList(source['repoNode'], fileNameComplete, buildFolderAbsolutePath)
                 for includeAbsolutePath in includeAbsolutePathList:
