@@ -162,6 +162,7 @@ class CommonApplication(object):
                         
         packageAbsolutePath = os.path.abspath(repoFolderAbsolutePathList)
 
+        rootList = []
         if os.path.isdir(packageAbsolutePath):
             if self.verbosity > minVerbosity:
                 print 'Parse repository folder \'{0}\'...'.format(repoFolderAbsolutePathList)
@@ -177,7 +178,14 @@ class CommonApplication(object):
             rootList = self.parseScript(None, packageAbsolutePath)
         else:
             raise ErrorWithDescription("Path not a folder or a file")
+
+        if len(rootList) == 0:
+            raise ErrorWithDescription("Path does not contain a repository")
         
+        for node in rootList:
+            if node.getObjectType() != 'Repository':
+                raise ErrorWithDescription("Path does not contain a repository")
+            
         for node in rootList:
             node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
             if self.verbosity > 0:
@@ -872,7 +880,8 @@ class CommonApplication(object):
                     
                 if count > 0 and self.verbosity > 0:
                     status = 'enabled' if evaluatedValue else 'disabled'
-                    print '- {0} \'{1}\' initially {2}'.format(node.getObjectType().lower(), node.getName(), status)
+                    print '- {0} \'{1}\' initially {2}'.format(
+                        node.getObjectType().lower(), node.getName(), status)
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -1079,7 +1088,7 @@ def enable(sid):
     if count > 0 and CommonApplication.getVerbosity() > 0:
         symbolName = node.getHeaderDefinition()
         if symbolName != None:
-            print '- {0} \'{1}\'/{2} enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
+            print '- {0} \'{1}\' ({2}) enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
         else:
             print '- {0} \'{1}\' enabled'.format(node.getObjectType().lower(), node.getName())
         
@@ -1190,7 +1199,7 @@ def setValue(sid, value):
     if count > 0 and CommonApplication.getVerbosity() > 0:
         symbolName = node.getHeaderDefinition()
         if symbolName != None:
-            print '- {0} \'{1}\'/{2} set to "{3}"'.format(node.getObjectType().lower(), node.getName(), symbolName, value)
+            print '- {0} \'{1}\' ({2}) set to "{3}"'.format(node.getObjectType().lower(), node.getName(), symbolName, value)
         else:
             print '- {0} \'{1}\' set to "{2}"'.format(node.getObjectType().lower(), node.getName(), value)
 
@@ -1213,7 +1222,11 @@ def implementationsOf(sid):
         print 'ERROR: Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid)
         return 0
         
-    return node.getValue()
+    nodeValue = node.getValue()
+    if CommonApplication.getVerbosity() > 1:
+        print 'implementationsOf("{0}")={1}'.format(sid, nodeValue)
+    
+    return nodeValue
 
 
 
