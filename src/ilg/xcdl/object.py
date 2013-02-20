@@ -191,7 +191,7 @@ class Object(object):
             self._activeIfList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
             del self._kwargs[key]
 
-        key='requires'
+        key='requirements'
         self._requiresList = None
         if key in self._kwargs:
             self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
