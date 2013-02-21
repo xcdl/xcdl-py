@@ -20,7 +20,7 @@ Params:
         (mandatory)
         
     -l, --linearise
-        linearise the build subfolder to shorten the path.
+        linearise the build subfolder to shorten the path. (default=True)
         
     -v, --verbose
         print progress output; more occurences increase verbosity.
@@ -36,6 +36,7 @@ Purpose:
 import os
 import getopt
 import time
+import sys
 
 from ilg.xcdl.commonApplication import CommonApplication
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
@@ -53,12 +54,15 @@ class Application(CommonApplication):
         
         self.configFilePath = None
         
-        self.desiredConfigurationId = None
+        self.desiredConfigurationName = None
         
-        self.outputFolder = None
+        self.outputFolder = 'build'
         
-        self.doLinearise = False
+        self.doLinearise = True
         
+        self.makeTarget = 'all'
+        
+        # Not used, but should be present as None
         self.toolchainId = None
         
         return
@@ -73,8 +77,8 @@ class Application(CommonApplication):
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'r:n:b:lhv',
-                            [ 'repository=', 'name=', 'build=',
+            (opts, args) = getopt.getopt(self.argv[1:], 'r:c:b:lhv',
+                            [ 'repository=', 'build_config=', 'build_dir=',
                              'linearise', 'help', 'verbose'])
         except getopt.GetoptError as err:
             # print help information and exit:
@@ -84,7 +88,9 @@ class Application(CommonApplication):
         
         retval = 0
         try:
-            if len(args) > 0:
+            if len(args) == 1:
+                self.makeTarget = args[0]
+            elif len(args) > 0:
                 print 'Unused arguments: '
                 for arg in args:
                     print '\t{0}'.format(arg)
@@ -95,9 +101,9 @@ class Application(CommonApplication):
                 # a = a
                 if o in ('-r', '--repository'):
                     self.packagesAbsolutePathList.append(a)
-                elif o in ('-n', '--name'):
+                elif o in ('-c', '--build_config'):
                     self.desiredConfigurationName = a
-                elif o in ('-b', '--build'):
+                elif o in ('-b', '--build_dir'):
                     self.outputFolder = a
                 elif o in ('-l', '--linearise'):
                     self.doLinearise = True
@@ -106,6 +112,8 @@ class Application(CommonApplication):
                 elif o in ('-h', '--help'):
                     self.usage()
                     return 0
+                elif o in ('all', 'clean'):
+                    print o
                 else:
                     assert False, 'option not handled'
 
@@ -126,21 +134,23 @@ class Application(CommonApplication):
 
     def validate(self):
         
+        if len(self.packagesAbsolutePathList) == 0:
+            raise ErrorWithDescription('Missing mandatory --repository parameter')
+            
         if self.desiredConfigurationName == None:
             raise ErrorWithDescription('Missing mandatory --name= parameter')
-
-        if self.outputFolder == None:
-            raise ErrorWithDescription('Missing mandatory --build= parameter')
                                 
         return
 
 
     def process(self):
+
+        startTime = time.time()
         
         if self.verbosity > 0:
             print
-            print '* The xcdlBuild tool (part of the XCDL framework) *'
-            print '* Create the distributed GNU Make files and build *'
+            print '* The \'xcdlBuild\' tool (part of the XCDL framework) *'
+            print 'Process component repositories, create the GNU Make files and execute them.'
             print
             if self.verbosity > 1:
                 print 'Verbosity level {0}'.format(self.verbosity)
@@ -148,8 +158,6 @@ class Application(CommonApplication):
         
         self.validate()
         
-        if self.verbosity > 0:
-            print
         repositoriesList = self.parseRepositories(self.packagesAbsolutePathList, 0)
 
         if self.verbosity > 0:
@@ -175,10 +183,15 @@ class Application(CommonApplication):
         if rootMakeFileUpdateTime > CommonApplication.maxScriptUpdateTime:
             if self.verbosity > 0:
                 print
-                print 'XCDL files did not change since last build, no need to recreate the build tree.'
+                print 'The XCDL files did not change since last build, no need to recreate the build tree.'
         else:
             toolchainNode = self.processAndCreate(repositoriesList, configNode, outputSubFolder, toolchainNode)      
         
+        stopTime = time.time()
+        print
+        print 'XCDL metadata processed in {0}.'.format(
+                        self.convertTimeDifferenceToString(stopTime - startTime))
+
         buildFolderAbsolutePath = os.path.join(self.outputFolder, outputSubFolder)
         self.executeBuild(configNode, buildFolderAbsolutePath, toolchainNode)
         return
@@ -245,19 +258,20 @@ class Application(CommonApplication):
     def executeBuild(self, configNode, buildFolderAbsolutePath, toolchainNode):
         
         print
-        print '**** XCDL configuration \'{0}\' ****'.format(configNode.getName())
-        print '**** Eclipse build configuration \'{0}\' ****'.format(self.desiredConfigurationName)
-        print '**** Toolchain \'{0}\' ****'.format(toolchainNode.getName())
+        if self.verbosity > 0:
+            print 'Configuration \'{0}\'.'.format(configNode.getName())
+            print 'Eclipse build configuration \'{0}\'.'.format(self.desiredConfigurationName)
+            print
         
         startTime = time.time()
-        print '**** {0} XCDL build started ****'.format(
-                        time.strftime('%H:%M:%S', time.localtime(startTime)))
+        print 'XCDL build started, using toolchain \'{0}\'...'.format(toolchainNode.getName())
         print
+        
         print 'cd {0}'.format(buildFolderAbsolutePath)
         os.chdir(buildFolderAbsolutePath)
         
         # TODO: get this from an external location 
-        toolchainBinAbsolutePath = '/opt/local/bin'
+        toolchainBinAbsolutePath = None  # '/opt/local/bin'
         
         env = os.environ
         path = env['PATH']
@@ -269,14 +283,28 @@ class Application(CommonApplication):
         newPath = ':'.join(pathElements)
         env['PATH'] = newPath
         print 'PATH={0}'.format(newPath)
+        print
+
+        makeCommand = ['make', self.makeTarget]
+        print ' '.join(makeCommand)
         
-        print 'make all'
-        os.spawnvpe(os.P_WAIT, 'make', ['make', 'all'], env)
+        sys.stdout.flush()
+        os.spawnvpe(os.P_WAIT, makeCommand[0], makeCommand, env)
+        sys.stdout.flush()
         
         stopTime = time.time()
-        print
-        print '**** {0} Build finished (took {1:.3f}s) ****'.format(
-                        time.strftime('%H:%M:%S', time.localtime(stopTime)),
-                        stopTime - startTime)
+        print 'XCDL build completed in {0}.'.format(
+                        self.convertTimeDifferenceToString(stopTime - startTime))
         
+        sys.stdout.flush()
         return
+
+    def convertTimeDifferenceToString(self, timeDifference):
+        
+        if timeDifference < 1:
+            # change unit to millisecond
+            timeDifference *= 1000
+            
+            return '{0:d}ms'.format(int(timeDifference))
+        
+        return '{0:.3f}s'.format(timeDifference)
