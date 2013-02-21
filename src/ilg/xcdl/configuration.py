@@ -56,6 +56,12 @@ class Configuration(Object):
         if key in self._kwargs:
             self._toolchainId = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'buildConfigurationName'
+        self._buildConfigurationName = None
+        if key in self._kwargs:
+            self._buildConfigurationName = self._kwargs[key]
+            del self._kwargs[key]
             
         return
 
@@ -138,6 +144,11 @@ class Configuration(Object):
     def getToolchainId(self):
         
         return self._toolchainId
+    
+    
+    def getBuildConfigurationName(self):
+        
+        return self._buildConfigurationName
     
     
 
