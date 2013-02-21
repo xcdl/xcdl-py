@@ -42,7 +42,7 @@ class Toolchain(Object):
 
         # ---------------------------------------------------------------------
         
-        key = 'includes'
+        key = 'includeFiles'
         self._includesList = None
         if key in self._kwargs:
             self._includesList = self._kwargs[key]
