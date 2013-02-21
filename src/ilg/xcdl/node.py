@@ -3,7 +3,7 @@
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 
 
-class Object(object):
+class Node(object):
     
     # static member
     _objectsList = None
@@ -12,14 +12,14 @@ class Object(object):
     @staticmethod
     def setList(oList):
         
-        Object._objectsList = oList
+        Node._objectsList = oList
         return
 
 
     @staticmethod    
     def getList():
         
-        return Object._objectsList
+        return Node._objectsList
     
     
     def __init__(self, **kwargs):
@@ -28,9 +28,24 @@ class Object(object):
         # will be consumed on each constructor
         self._kwargs = kwargs
 
+        # ---------------------------------------------------------------------
+        try:
+            if 'id' in kwargs:
+                obj = 'id={0}'.format(kwargs['id'])
+            else:
+                obj = kwargs
+                
+            for key in self.unavailableKeywords:
+                if key in self._kwargs:
+                    print 'Property {0} unavailable for object {1}, ignored'.format(key, obj)
+                    del self._kwargs[key]
+        except:
+            pass
+        
+
         # if the static list is defined, add object to the list
-        if Object._objectsList != None:
-            Object._objectsList.append(self)
+        if Node._objectsList != None:
+            Node._objectsList.append(self)
 
         # initialise empty members
         self._treeParent = None
@@ -40,6 +55,7 @@ class Object(object):
 
         # can be set only in Repository object
         self._sourcesPathsList = None
+        
         
         # ---------------------------------------------------------------------
         # main properties id, name, description
@@ -75,147 +91,6 @@ class Object(object):
         self._parentId = None
         if key in self._kwargs:
             self._parentId = self._kwargs[key]
-            del self._kwargs[key]
-
-        # ---------------------------------------------------------------------
-        # build related properties
-
-        key = 'sourceFiles'
-        self._sourceFilesList = None
-        if key in self._kwargs:
-            self._sourceFilesList = self._kwargs[key]
-            del self._kwargs[key]
-
-        key = 'linkPriority'
-        self._linkPriority = None
-        if key in self._kwargs:
-            if self._sourceFilesList == None or len(self._sourceFilesList) == 0:
-                print 'ERROR: Node {0} has no source files, \'linkPriority\' ignored'.format(self._id)
-            else:
-                try:
-                    n = int(self._kwargs[key])
-                    if 0 <= n and n <= 99:
-                        self._linkPriority = n
-                    else:
-                        print 'ERROR: \'linkPriority\' not in [00-99], ignored, Node {0}'.format(self._id)
-                except:
-                    print 'ERROR: \'linkPriority\' not a number, ignored, Node {0}'.format(self._id)
-                                    
-            del self._kwargs[key]
-
-
-        # ---------------------------------------------------------------------
-        # status properties
-            
-        key='isConfigurable'
-        self._isConfigurableExpression = None
-        if key in self._kwargs:
-            self._isConfigurableExpression = self._kwargs[key]
-            del self._kwargs[key]
-
-        
-        self._isEnabled = self.getDefaultIsEnabled()
-
-        key='isEnabled'
-        self._initialIsEnabled = None
-        if key in self._kwargs:
-            self._initialIsEnabled = self._kwargs[key]
-            del self._kwargs[key]
-            
-            # if the value is a constant, apply it here
-            if isinstance(self._initialIsEnabled, bool):
-                self._isEnabled = self._initialIsEnabled
-
-        # ---------------------------------------------------------------------
-        # value related properties
-        
-        key='valueType'
-        self._valueType = None
-        if key in self._kwargs:
-            # none, bool, number, string
-            val = self._kwargs[key]
-            if val not in ['none', 'bool', 'int', 'float', 'string']:
-                print 'ERROR: Unsupported valueType \'{0}\', defaulting to \'none\' in node \'{1}\''.format(val, self._id)
-                self._valueType = 'none'
-            else:
-                self._valueType = self._kwargs[key]
-            del self._kwargs[key]
-        
-        self._value = None
-        
-        key='computed'
-        self._computedExpression = None
-        if key in self._kwargs:
-            if self._valueType == None or self._valueType == 'none':
-                print 'ERROR: Node {0} has no value, \'computed\' ignored'.format(self._id)
-            else:
-                self._computedExpression = self._kwargs[key]
-                
-            del self._kwargs[key]
-
-        key='defaultValue'
-        self._defaultValueExpression = None
-        if key in self._kwargs:
-            if self._computedExpression != None:
-                print 'ERROR: Node {0} already has a compute, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
-            else:
-                if self._valueType == None or self._valueType == 'none':
-                    print 'ERROR: Node {0} has no value, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
-                else:
-                    self._defaultValueExpression = self._kwargs[key]
-                
-            del self._kwargs[key]
-
-        key='legalValues'
-        self._legalValuesList = None
-        if key in self._kwargs:
-            if self._valueType == None or self._valueType == 'none':
-                print 'ERROR: Node {0} has no value, \'legalValues\' ignored'.format(self._id)
-            else:
-                self._legalValuesList = self._kwargs[key]
-                
-            del self._kwargs[key]
-
-        key='valueFormat'
-        self._valueFormat = None
-        if key in self._kwargs:
-            self._valueFormat = self._kwargs[key]
-            del self._kwargs[key]
-                                    
-        # ---------------------------------------------------------------------
-        # constraints related properties
-
-        key='activeIf'
-        self._activeIfList = None
-        if key in self._kwargs:
-            self._activeIfList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
-            del self._kwargs[key]
-
-        key='requirements'
-        self._requiresList = None
-        if key in self._kwargs:
-            self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
-            del self._kwargs[key]
-
-        key='implements'
-        self._implementsList = None
-        if key in self._kwargs:
-            self._implementsList = self._kwargs[key]
-            del self._kwargs[key]
-            
-        # ---------------------------------------------------------------------
-        # header related properties
-
-        key = 'headerFile'
-        self._headerFile = None
-        if key in self._kwargs:
-            self._headerFile = self._kwargs[key]
-            del self._kwargs[key]
-
-        key = 'headerDefinition'
-        self._headerDefinition = None
-        if key in self._kwargs:
-            self._headerDefinition = self._kwargs[key]
             del self._kwargs[key]
 
         # ---------------------------------------------------------------------
@@ -280,7 +155,11 @@ class Object(object):
         
         return self._description
     
-
+    # -------------------------------------------------------------------------
+    def getParentId(self):
+        
+        return self._parentId
+    
     
     # -------------------------------------------------------------------------
     # tree links
@@ -322,7 +201,247 @@ class Object(object):
 
 
     # -------------------------------------------------------------------------
+    # category='<string>'
+    def getCategory(self):
+        
+        return self._category
+    
+    
+    def setCategory(self, category):
+        
+        self._category = category
+        return
 
+        
+    def getPackageLocation(self):
+        
+        return self._packageLocation
+    
+    
+    def setPackageLocation(self, packageLocation):
+        
+        self._packageLocation = packageLocation
+        return
+    
+        
+    def getPackageTreeNode(self):
+        
+        if self.getObjectType() == 'Package' or self.getObjectType() == 'Repository':
+            return self
+        
+        if self._treeParent == None:
+            return None
+        
+        return self._treeParent.getPackageTreeNode()
+
+    # -------------------------------------------------------------------------
+    # support for simple objects, to avoid additional tests
+    
+    # simple objects have no children
+    def getChildrenList(self):
+        
+        return None
+    
+
+    # simple objects have no scripts
+    def getIncludesList(self):
+        
+        return None
+    
+    # simple objects have no loadPackages
+    def getLoadPackagesList(self):
+        
+        return None
+
+
+    def getInitialIsEnabled(self):
+        
+        return False
+    
+    
+    def getDefaultIsEnabled(self):
+        
+        # most objects start as enabled
+        # overwrite this for objects that are exceptions to this rule
+        return True
+    
+
+    def getDefaultIsConfigurable(self):
+        
+        # most objects start as configurable (interfaces are exceptions)
+        return True
+
+
+    # ???
+    # -------------------------------------------------------------------------
+    # climb the hierarchy until found
+    def getBasePath(self):
+        
+        # if explicitly set, return it
+        if self._basePath != None:
+            return self._basePath
+        
+        # if there is no parent, then no other chance left
+        if self._treeParent == None:
+            return None
+        
+        # return the parent base path
+        return self._treeParent.getBasePath()
+    
+
+
+# -----------------------------------------------------------------------------
+
+class ActiveNode(Node):
+
+    def __init__(self, **kwargs):
+        
+        super(ActiveNode, self).__init__(**kwargs)
+        
+        # ---------------------------------------------------------------------
+        # build related properties
+
+        key = 'sourceFiles'
+        self._sourceFilesList = None
+        if key in self._kwargs:
+            self._sourceFilesList = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'linkPriority'
+        self._linkPriority = None
+        if key in self._kwargs:
+            if self._sourceFilesList == None or len(self._sourceFilesList) == 0:
+                print 'ERROR: Node {0} has no source files, \'linkPriority\' ignored'.format(self._id)
+            else:
+                try:
+                    n = int(self._kwargs[key])
+                    if 0 <= n and n <= 99:
+                        self._linkPriority = n
+                    else:
+                        print 'ERROR: \'linkPriority\' not in [00-99], ignored, Node {0}'.format(self._id)
+                except:
+                    print 'ERROR: \'linkPriority\' not a number, ignored, Node {0}'.format(self._id)
+                                    
+            del self._kwargs[key]
+
+
+        # ---------------------------------------------------------------------
+        # status properties
+            
+        key = 'isConfigurable'
+        self._isConfigurableExpression = None
+        if key in self._kwargs:
+            self._isConfigurableExpression = self._kwargs[key]
+            del self._kwargs[key]
+
+        
+        self._isEnabled = self.getDefaultIsEnabled()
+
+        key = 'isEnabled'
+        self._initialIsEnabled = None
+        if key in self._kwargs:
+            self._initialIsEnabled = self._kwargs[key]
+            del self._kwargs[key]
+            
+            # if the value is a constant, apply it here
+            if isinstance(self._initialIsEnabled, bool):
+                self._isEnabled = self._initialIsEnabled
+
+        # ---------------------------------------------------------------------
+        # value related properties
+        
+        key = 'valueType'
+        self._valueType = None
+        if key in self._kwargs:
+            # none, bool, number, string
+            val = self._kwargs[key]
+            if val not in ['none', 'bool', 'int', 'float', 'string']:
+                print 'ERROR: Unsupported valueType \'{0}\', defaulting to \'none\' in node \'{1}\''.format(val, self._id)
+                self._valueType = 'none'
+            else:
+                self._valueType = self._kwargs[key]
+            del self._kwargs[key]
+        
+        self._value = None
+        
+        key = 'computed'
+        self._computedExpression = None
+        if key in self._kwargs:
+            if self._valueType == None or self._valueType == 'none':
+                print 'ERROR: Node {0} has no value, \'computed\' ignored'.format(self._id)
+            else:
+                self._computedExpression = self._kwargs[key]
+                
+            del self._kwargs[key]
+
+        key = 'defaultValue'
+        self._defaultValueExpression = None
+        if key in self._kwargs:
+            if self._computedExpression != None:
+                print 'ERROR: Node {0} already has a compute, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
+            else:
+                if self._valueType == None or self._valueType == 'none':
+                    print 'ERROR: Node {0} has no value, \'defaultValue={1}\' ignored'.format(self._id, self._kwargs[key])
+                else:
+                    self._defaultValueExpression = self._kwargs[key]
+                
+            del self._kwargs[key]
+
+        key = 'legalValues'
+        self._legalValuesList = None
+        if key in self._kwargs:
+            if self._valueType == None or self._valueType == 'none':
+                print 'ERROR: Node {0} has no value, \'legalValues\' ignored'.format(self._id)
+            else:
+                self._legalValuesList = self._kwargs[key]
+                
+            del self._kwargs[key]
+
+        key = 'valueFormat'
+        self._valueFormat = None
+        if key in self._kwargs:
+            self._valueFormat = self._kwargs[key]
+            del self._kwargs[key]
+                                    
+        # ---------------------------------------------------------------------
+        # constraints related properties
+
+        key = 'activeIf'
+        self._activeIfList = None
+        if key in self._kwargs:
+            self._activeIfList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
+            del self._kwargs[key]
+
+        key = 'requirements'
+        self._requiresList = None
+        if key in self._kwargs:
+            self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
+            del self._kwargs[key]
+
+        key = 'implements'
+        self._implementsList = None
+        if key in self._kwargs:
+            self._implementsList = self._kwargs[key]
+            del self._kwargs[key]
+            
+        # ---------------------------------------------------------------------
+        # header related properties
+
+        key = 'headerFile'
+        self._headerFile = None
+        if key in self._kwargs:
+            self._headerFile = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'headerDefinition'
+        self._headerDefinition = None
+        if key in self._kwargs:
+            self._headerDefinition = self._kwargs[key]
+            del self._kwargs[key]
+
+        return
+    
+    
     def isActive(self):
         
         # nodes need to be enabled to be active
@@ -355,26 +474,9 @@ class Object(object):
             
         return self._isEnabled
 
-
-    def getInitialIsEnabled(self):
-        
-        return self._initialIsEnabled
-    
-    
-    def getDefaultIsEnabled(self):
-        
-        # most objects start as enabled
-        # overwrite this for objects that are exceptions to this rule
-        return True
-    
-
-    def getDefaultIsConfigurable(self):
-        
-        # most objects start as configurable (interfaces are exceptions)
-        return True
     
     # return True if the value was set
-    def setIsEnabled(self, isEnabled = True):
+    def setIsEnabled(self, isEnabled=True):
 
         if not self.isLoaded():
             return False
@@ -384,7 +486,7 @@ class Object(object):
 
 
     # return 1 if the value was changed
-    def setIsEnabledWithCount(self, isEnabled = True):
+    def setIsEnabledWithCount(self, isEnabled=True):
 
         if not self.isLoaded():
             return 0
@@ -528,11 +630,6 @@ class Object(object):
         
     
     # -------------------------------------------------------------------------
-    def getParentId(self):
-        
-        return self._parentId
-    
-    
     def getSourceFilesList(self):
         
         return self._sourceFilesList
@@ -578,65 +675,12 @@ class Object(object):
         return (headerLine, headerFile)
 
 
-    # category='<string>'
-    def getCategory(self):
-        
-        return self._category
-    
-    
-    def setCategory(self, category):
-        
-        self._category = category
-        return
-
-        
-    def getPackageLocation(self):
-        
-        return self._packageLocation
-    
-    
-    def setPackageLocation(self, packageLocation):
-        
-        self._packageLocation = packageLocation
-        return
-    
-        
-    def getPackageTreeNode(self):
-        
-        if self.getObjectType() == 'Package' or self.getObjectType() == 'Repository':
-            return self
-        
-        if self._treeParent == None:
-            return None
-        
-        return self._treeParent.getPackageTreeNode()
-
-
     # a node is loaded if its parent package is loaded
     def isLoaded(self):
         
         return self.getPackageTreeNode().isLoaded()
     
     
-    # -------------------------------------------------------------------------
-    # support for simple objects, to avoid additional tests
-    
-    # simple objects have no children
-    def getChildrenList(self):
-        
-        return None
-    
-
-    # simple objects have no scripts
-    def getIncludesList(self):
-        
-        return None
-    
-    # simple objects have no loadPackages
-    def getLoadPackagesList(self):
-        
-        return None
-
 
     def getImplementsList(self):
         
@@ -653,26 +697,8 @@ class Object(object):
         
         # TODO: implement
         return True
-    
-    
-    # ???
-    # -------------------------------------------------------------------------
-    # climb the hierarchy until found
-    def getBasePath(self):
+
         
-        # if explicitly set, return it
-        if self._basePath != None:
-            return self._basePath
-        
-        # if there is no parent, then no other chance left
-        if self._treeParent == None:
-            return None
-        
-        # return the parent base path
-        return self._treeParent.getBasePath()
-    
-    
-    
     # climb the hierarchy until found
     def getSourcePathsListRecursive(self):
         
@@ -712,6 +738,11 @@ class Object(object):
     def getRequiresList(self):
         
         return self._requiresList
+
+    
+    def getInitialIsEnabled(self):
+        
+        return self._initialIsEnabled
     
     
     def isConfigurableEvaluated(self):

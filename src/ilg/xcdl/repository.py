@@ -7,12 +7,14 @@ class Repository(Package):
     
     def __init__(self, **kwargs):
         
-        super(Repository,self).__init__(**kwargs)
+        self.unavailableKeywords = ['parent', 'computed', 'isConfigurable', 
+                    'valueType', 'valueFormat', 'legalValues']
+        
+        super(Repository, self).__init__(**kwargs)
 
         # ---------------------------------------------------------------------
         self._isLoaded = False
-        
-        
+                
         key = 'buildSubFolder'
         self._buildSubFolder = None
         if key in self._kwargs:
@@ -25,7 +27,6 @@ class Repository(Package):
             self._sourcesPathsList = self._kwargs[key]
             del self._kwargs[key]
         
-
         # only for repository nodes
         self._repositoryFolder = None 
            

@@ -3,7 +3,7 @@
 import os
 
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
-from ilg.xcdl.object import Object
+from ilg.xcdl.node import Node
 
 from ilg.xcdl.packageLocation import PackageLocation
 
@@ -304,7 +304,7 @@ class CommonApplication(object):
         # list used to collect all objects contributed by encountered 
         # constructors
         localList = []
-        Object.setList(localList)
+        Node.setList(localList)
         
         if not os.path.isfile(scriptAbsolutePath):
             raise ErrorWithDescription('Missing script file \'{0}\''.

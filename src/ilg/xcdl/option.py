@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from ilg.xcdl.object import Object
+from ilg.xcdl.node import ActiveNode
 
-class Option(Object):
+class Option(ActiveNode):
     
     
     def __init__(self, **kwargs):

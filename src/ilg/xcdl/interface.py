@@ -1,46 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from ilg.xcdl.object import Object
+from ilg.xcdl.node import ActiveNode
 
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 
-class Interface(Object):
+class Interface(ActiveNode):
     
     
     def __init__(self, **kwargs):
         
-        super(Interface,self).__init__(**kwargs)
-        
-        key='isConfigurable'
-        self._isConfigurableExpression = None
-        if key in self._kwargs:
-            del self._kwargs[key]
-            raise ErrorWithDescription('Unsupported property {0}'.format(key))
+        self.unavailableKeywords = ['computed', 'defaultValue', 'isConfigurable',
+                    'valueType', 'implements']
 
-        key='computed'
-        self._computedExpression = None
-        if key in self._kwargs:
-            del self._kwargs[key]
-            raise ErrorWithDescription('Unsupported property {0}'.format(key))
-
-        key='defaultValue'
-        self._defaultValueExpression = None
-        if key in self._kwargs:
-            del self._kwargs[key]
-            raise ErrorWithDescription('Unsupported property {0}'.format(key))
-
-        key='valueType'
-        self._valueType = 'int'
-        if key in self._kwargs:
-            del self._kwargs[key]
-            raise ErrorWithDescription('Unsupported property {0}'.format(key))
-
-        key='implements'
-        self._implementsList = None
-        if key in self._kwargs:
-            del self._kwargs[key]
-            raise ErrorWithDescription('Unsupported property {0}'.format(key))
-        
+        super(Interface, self).__init__(**kwargs)
+                
         # the list where all implementations will be collected
         self._implementationsList = []
         

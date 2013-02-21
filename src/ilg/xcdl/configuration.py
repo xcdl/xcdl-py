@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from ilg.xcdl.object import Object
+from ilg.xcdl.node import Node
 
-class Configuration(Object):
+class Configuration(Node):
     
     
     def __init__(self, **kwargs):
@@ -13,12 +13,6 @@ class Configuration(Object):
         key = 'children'
         if key in self._kwargs:
             self._childrenList = self._kwargs[key]
-            del self._kwargs[key]
-
-        self._scriptsList = None
-        key = 'scripts'
-        if key in self._kwargs:
-            self._scriptsList = self._kwargs[key]
             del self._kwargs[key]
 
         key = 'options'
@@ -62,6 +56,12 @@ class Configuration(Object):
         if key in self._kwargs:
             self._buildConfigurationName = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'requirements'
+        self._requiresList = None
+        if key in self._kwargs:
+            self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
+            del self._kwargs[key]
             
         return
 
@@ -71,11 +71,6 @@ class Configuration(Object):
         return False
     
     
-    def getScriptsList(self):
-        
-        return self._scriptsList
-
-
     def getOptionsList(self):
         
         return self._optionsList
@@ -149,6 +144,11 @@ class Configuration(Object):
     def getBuildConfigurationName(self):
         
         return self._buildConfigurationName
+
+    
+    def getRequiresList(self):
+        
+        return self._requiresList
     
     
 

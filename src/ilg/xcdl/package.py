@@ -7,6 +7,9 @@ class Package(Component):
     
     def __init__(self, **kwargs):
         
+        self.unavailableKeywords = ['computed', 'isConfigurable', 
+                    'valueType', 'valueFormat', 'legalValues']
+
         super(Package,self).__init__(**kwargs)
 
         # ---------------------------------------------------------------------

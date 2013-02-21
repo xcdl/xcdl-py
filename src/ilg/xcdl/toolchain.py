@@ -3,10 +3,10 @@
 # Copyright (C) 2013 Liviu Ionescu.
 # This file is part of the XCDL distribution.
 
-from ilg.xcdl.object import Object
+from ilg.xcdl.node import Node
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 
-class Toolchain(Object):
+class Toolchain(Node):
     
     allowedPropertiesList=[
         'compilerObjectsExtension',
