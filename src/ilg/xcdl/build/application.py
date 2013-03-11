@@ -11,11 +11,11 @@ Params:
         the relative/absolute path to the repository folder;
         multiple repositories accepted. (mandatory)
     
-    -n, --name
+    -c, --build_config
         the name of the build configuration to be generated; can be only a 
         leaf node. (mandatory)
 
-    -b, --build
+    -b, --build_dir
         the output folder, where the build configurations will be created.
         (mandatory)
         
@@ -118,7 +118,7 @@ class Application(CommonApplication):
                     assert False, 'option not handled'
 
             CommonApplication.setVerbosity(self.verbosity)
-            self.process()
+            retval = self.process()
             
         except ErrorWithDescription as err:
             print 'ERROR: {0}'.format(err)
@@ -193,8 +193,8 @@ class Application(CommonApplication):
                         self.convertTimeDifferenceToString(stopTime - startTime))
 
         buildFolderAbsolutePath = os.path.join(self.outputFolder, outputSubFolder)
-        self.executeBuild(configNode, buildFolderAbsolutePath, toolchainNode)
-        return
+        ret = self.executeBuild(configNode, buildFolderAbsolutePath, toolchainNode)
+        return ret
 
 
     def processAndCreate(self, repositoriesList, configNode, outputSubFolder, toolchainNode):
@@ -289,15 +289,17 @@ class Application(CommonApplication):
         print ' '.join(makeCommand)
         
         sys.stdout.flush()
-        os.spawnvpe(os.P_WAIT, makeCommand[0], makeCommand, env)
+        sys.stderr.flush()
+        ret = os.spawnvpe(os.P_WAIT, makeCommand[0], makeCommand, env)
         sys.stdout.flush()
+        sys.stderr.flush()
         
         stopTime = time.time()
         print 'XCDL build completed in {0}.'.format(
                         self.convertTimeDifferenceToString(stopTime - startTime))
         
         sys.stdout.flush()
-        return
+        return ret
 
     def convertTimeDifferenceToString(self, timeDifference):
         
