@@ -1291,6 +1291,9 @@ class CommonApplication(object):
                 
                 p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
                 sourceAbsolutePath = source['sourceAbsolutePath']
+                
+                toolStandard = None;
+                toolOptions = None;
                                    
                 fType = source['type']
                 if fType == '.cpp':
@@ -1306,10 +1309,12 @@ class CommonApplication(object):
                         if toolName == None:
                             print 'WARN: Missing \'programName\' in tool \'cpp\', toolchain \'{0}\', using default \'g++\''.format(toolchainNode.getName())                      
                             toolName = 'g++'
-                        toolDesc = tool.getDescription()
+                        toolDesc = toolchainNode.getToolDescriptionRecursive('cpp')
                         if toolDesc == None:
-                            print 'WARN: Missing \'description\' in tool \'cpp\', toolchain \'{0}\', using default\'GNU default g++\''.format(toolchainNode.getName())                      
+                            print 'WARN: Missing \'description\' in tool \'cpp\', toolchain \'{0}\', using default \'GNU default g++\''.format(toolchainNode.getName())                      
                             toolDesc = 'GNU default g++'
+                        toolStandard = toolchainNode.getToolStandardRecursive('cpp')
+                        toolOptions = toolchainNode.getToolOptionsRecursive('cpp')
                         
                 elif fType == '.c':
                     typeDeps = 'C_DEPS'
@@ -1324,10 +1329,12 @@ class CommonApplication(object):
                         if toolName == None:
                             print 'WARN: Missing \'programName\' in tool \'cc\', toolchain \'{0}\', using default \'gcc\''.format(toolchainNode.getName())                      
                             toolName = 'gcc'
-                        toolDesc = tool.getDescription()
+                        toolDesc = toolchainNode.getToolDescriptionRecursive('cc')
                         if toolDesc == None:
                             print 'WARN: Missing \'description\' in tool \'cc\', toolchain \'{0}\', using default \'GNU default gcc\''.format(toolchainNode.getName())                      
                             toolDesc = 'GNU default gcc'
+                        toolStandard = toolchainNode.getToolStandardRecursive('cc')
+                        toolOptions = toolchainNode.getToolOptionsRecursive('cc')
                 
                 elif fType == '.S':
                     typeDeps = 'S_DEPS'
@@ -1398,20 +1405,31 @@ class CommonApplication(object):
                 if compilerCpu != None:
                     f.write(' {0}'.format(compilerCpu))
 
+                if toolStandard != None:
+                    f.write(' {0}'.format(toolStandard))
+
+                if toolOptions != None:
+                    f.write(' {0}'.format(toolOptions))
+
                 compilerOptimisationOptions = toolchainNode.getPropertyRecursive('compilerOptimisationOptions')
-                f.write(' {0}'.format(compilerOptimisationOptions))
+                if compilerOptimisationOptions != None:
+                    f.write(' {0}'.format(compilerOptimisationOptions))
                 
                 compilerDebugOptions = toolchainNode.getPropertyRecursive('compilerDebugOptions')
-                f.write(' {0}'.format(compilerDebugOptions))
+                if compilerDebugOptions != None:
+                    f.write(' {0}'.format(compilerDebugOptions))
                     
                 compilerWarningOptions = toolchainNode.getPropertyRecursive('compilerWarningOptions')
-                f.write(' {0}'.format(compilerWarningOptions))
+                if compilerWarningOptions != None:
+                    f.write(' {0}'.format(compilerWarningOptions))
 
                 compilerMiscOptions = toolchainNode.getPropertyRecursive('compilerMiscOptions')
-                f.write(' {0}'.format(compilerMiscOptions))
+                if compilerMiscOptions != None:
+                    f.write(' {0}'.format(compilerMiscOptions))
                     
                 compilerDepsOptions = toolchainNode.getPropertyRecursive('compilerDepsOptions')
-                f.write(' {0}'.format(compilerDepsOptions))
+                if compilerDepsOptions != None:
+                    f.write(' {0}'.format(compilerDepsOptions))
                     
                 compilerOutputOptions = toolchainNode.getPropertyRecursiveWithDefault('compilerOutputOptions')
                 f.write(' {0}'.format(compilerOutputOptions))

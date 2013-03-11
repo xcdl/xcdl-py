@@ -221,6 +221,37 @@ class Toolchain(Node):
         
         return parentNode.getToolDescriptionRecursive(key)
 
+
+    def getToolStandardRecursive(self, key):
+        
+        if key in self._toolsDict:
+            tool = self._toolsDict[key]
+            if tool != None:
+                standard = tool.getStandard()
+                if standard != None:
+                    return standard
+                    
+        parentNode = self.getTreeParent()
+        if parentNode == None:
+            return None
+        
+        return parentNode.getToolStandardRecursive(key)
+
+    def getToolOptionsRecursive(self, key):
+        
+        if key in self._toolsDict:
+            tool = self._toolsDict[key]
+            if tool != None:
+                options = tool.getOptions()
+                if options != None:
+                    return options
+                    
+        parentNode = self.getTreeParent()
+        if parentNode == None:
+            return None
+        
+        return parentNode.getToolOptionsRecursive(key)
+
         
 class Tool():
     
@@ -229,25 +260,30 @@ class Tool():
         self._kwargs = kwargs
         self._toolchain = None;
         self._toolName = None
+        self._standard = None
         
         key = 'programName'
+        self._programName = None
         if key in self._kwargs:
             self._programName = self._kwargs[key]
             del self._kwargs[key]
-        else:
-            raise ErrorWithDescription('Mandatory Tool() programName missing')
 
         key = 'description'
+        self._description = None
         if key in self._kwargs:
             self._description = self._kwargs[key]
             del self._kwargs[key]
-        else:
-            raise ErrorWithDescription('Mandatory Tool() description missing')
 
         key = 'options'
         self._options = None
         if key in self._kwargs:
             self._options = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'standard'
+        self._standard = None
+        if key in self._kwargs:
+            self._standard = self._kwargs[key]
             del self._kwargs[key]
             
         return
@@ -283,6 +319,11 @@ class Tool():
     def getOptions(self):
         
         return self._options
+
+    
+    def getStandard(self):
+        
+        return self._standard
     
     
     def getPlatformSystem(self):
