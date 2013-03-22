@@ -154,9 +154,17 @@ class CommonApplication(object):
 
 
     @staticmethod    
-    def addToErrorCount(count):
+    def addToErrorCount(count = 1):
         
         CommonApplication.errorCount += count
+        return
+
+
+    @staticmethod    
+    def reportError(str):
+        print 'ERROR: {0}'.format(str)
+        CommonApplication.addToErrorCount()
+        
         return
     
     # -------------------------------------------------------------------------    
@@ -175,7 +183,7 @@ class CommonApplication(object):
         self.indent = '   '
 
         return
-    
+   
     
     def parseRepositories(self, repositoriesAbsolutePathList, minVerbosity):
         
@@ -261,7 +269,7 @@ class CommonApplication(object):
                 if self.verbosity > 0:
                     print '- repository package file \'{0}\' added to list'.format(repoAbsolutePath)
             else:
-                print 'ERROR: path \'{0}\' does not exist, ignored'.format(repoAbsolutePath)
+                CommonApplication.reportError('path \'{0}\' does not exist, ignored'.format(repoAbsolutePath))
 
         RepositoryFolder.setList(None)
         return (configTreesList, repoFolderAbsolutePathList)
@@ -546,7 +554,7 @@ class CommonApplication(object):
             kind += ',{0}'.format(node.getValueType())
         kind += ')'
         
-        if objectType not in ['Toolchain']:
+        if objectType not in ['Toolchain', 'Configuration']:
             kind += (' +E' if node.isEnabled() else ' -E')
             kind += (' +A' if node.isActive() else ' -A')
         
@@ -629,10 +637,13 @@ class CommonApplication(object):
             if headerPath != None:
                 print '{0}- headerFile \'{1}\''.format(indent * (depth + 1), headerPath)
         
-        requirementsList = node.getRequiresList()
-        if requirementsList != None:
-            for requirement in requirementsList:
-                print '{0}- requirement \'{1}\''.format(indent * (depth + 1), requirement)
+        try:
+            requirementsList = node.getRequiresList()
+            if requirementsList != None:
+                for requirement in requirementsList:
+                    print '{0}- requirement \'{1}\''.format(indent * (depth + 1), requirement)
+        except:
+            pass 
                 
         children = node.getTreeChildrenList()
         if children == None:
@@ -917,11 +928,11 @@ class CommonApplication(object):
                             break
                         
                     if foundSourcePath == None:
-                        print 'ERROR: source file: \'{0}\' not found'.format(sourceFile)
+                        CommonApplication.reportError('source file: \'{0}\' not found'.format(sourceFile))
                         continue
                     
                     if not sourceAbsolutePath.startswith(rootPackageFolder):
-                        print 'ERROR: paths do not match'
+                        CommonApplication.reportError('paths do not match')
                         continue
                     
                     subPath = sourceAbsolutePath[len(rootPackageFolder) + 1:]
@@ -1041,7 +1052,7 @@ class CommonApplication(object):
                     # count errors
                     CommonApplication.addToErrorCount(1)
                     if doReport:
-                        print ('ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.
+                        CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\''.
                                format(requires, node.getName()))
             
         children = node.getTreeChildrenList()
@@ -1063,7 +1074,7 @@ class CommonApplication(object):
             for requires in requiresList:
                 if not eval(requires):
                     if doReport:
-                        print ('ERROR: Requirement \'{0}\' not satisfied for node \'{1}\''.
+                        CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\''.
                                format(requires, node.getName()))
 
         parentNode = node.getTreeParent()
@@ -1087,11 +1098,11 @@ class CommonApplication(object):
             
             for sid in implementsList:
                 if not CommonApplication.isObjectById(sid):
-                    print 'ERROR: Missing id=\'{0}\', \'implements\' property ignored'.format(sid)
+                    CommonApplication.reportError('Missing id=\'{0}\', \'implements\' property ignored'.format(sid))
                     
                 interfaceNode = CommonApplication.getObjectById(sid)
                 if interfaceNode.getObjectType() != 'Interface':
-                    print 'ERROR: Node id=\'{0}\', not an interface, \'implements\' property ignored'.format(sid)
+                    CommonApplication.reportError('Node id=\'{0}\', not an interface, \'implements\' property ignored'.format(sid))
                 
                 # finally add the current node to the interface implementations list    
                 count = interfaceNode.addImplementationWithCount(node.getId())
@@ -1134,7 +1145,7 @@ class CommonApplication(object):
 
             if CommonApplication.isObjectBySymbol(headerDefinition):
                 firstDefinition = CommonApplication.getObjectBySymbol(headerDefinition)
-                print 'ERROR: Preprocessor symbol {0} redefined in \'{1}\' (first definition in {2})'.format(headerDefinition, node.getName(), firstDefinition.getName())
+                CommonApplication.reportError('Preprocessor symbol {0} redefined in \'{1}\' (first definition in {2})'.format(headerDefinition, node.getName(), firstDefinition.getName()))
             else:
                 CommonApplication.insertObjectBySymbol(node)
                 count += 1
@@ -1161,7 +1172,7 @@ class CommonApplication(object):
             if CommonApplication.isObjectById(toolchainId):
                 toolchainNode = CommonApplication.getObjectById(toolchainId)
             else:
-                print 'ERROR: param toolchain \'{0}\' not found, ignored'.format(toolchainId)
+                CommonApplication.reportError('param toolchain \'{0}\' not found, ignored'.format(toolchainId))
                 toolchainId = None
 
         if toolchainId == None:           
@@ -1170,7 +1181,7 @@ class CommonApplication(object):
             if toolchainId != None and CommonApplication.isObjectById(toolchainId):
                 toolchainNode = CommonApplication.getObjectById(toolchainId)
             else:
-                print 'ERROR: config toolchain \'{0}\' not found, ignored'.format(toolchainId)
+                CommonApplication.reportError('config toolchain \'{0}\' not found, ignored'.format(toolchainId))
                 toolchainId = None
             
         if toolchainNode == None:
@@ -1721,15 +1732,15 @@ def enable(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, enable("{0}") ignored'.format(sid)
+            CommonApplication.reportError('Node not found, enable("{0}") ignored'.format(sid))
             return False
     
     if not node.isLoaded():
-        print 'ERROR: Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid))
         return False
 
     if not node.isConfigurableEvaluated():
-        print 'ERROR: Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid))
         return False
         
     count = node.setIsEnabledWithCount()
@@ -1754,15 +1765,15 @@ def disable(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, disable("{0}") ignored'.format(sid)
+            CommonApplication.reportError('Node not found, disable("{0}") ignored'.format(sid))
             return False
     
     if not node.isLoaded():
-        print 'ERROR: Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid))
         return False
 
     if not node.isConfigurableEvaluated():
-        print 'ERROR: Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid))
         return False
         
     count = node.setIsEnabledWithCount(False)
@@ -1787,7 +1798,7 @@ def isEnabled(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, isEnabled("{0}") return False'.format(sid)
+            CommonApplication.reportError('Node not found, isEnabled("{0}") return False'.format(sid))
             return False
         
     return node.isEnabled()
@@ -1801,7 +1812,7 @@ def isActive(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, isActive("{0}") return False'.format(sid)
+            CommonApplication.reportError('Node not found, isActive("{0}") return False'.format(sid))
             return False
         
     return node.isActive()
@@ -1815,7 +1826,7 @@ def valueOf(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, valueOf("{0}") return 0'.format(sid)
+            CommonApplication.reportError('Node not found, valueOf("{0}") return 0'.format(sid))
             return False
         
     return node.getValueWithType()
@@ -1832,15 +1843,15 @@ def setValue(sid, value):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            print 'ERROR: Node not found, setValue("{0}") ignored'.format(sid)
+            CommonApplication.reportError('Node not found, setValue("{0}") ignored'.format(sid))
             return False
     
     if not node.isConfigurableEvaluated():
-        print 'ERROR: Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid))
         return False
 
     if node.getValueTypeWithDefault() == 'none':
-        print 'ERROR: Node \'{0}\' has valueType=\'none\', setValue("{1}") ignored'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' has valueType=\'none\', setValue("{1}") ignored'.format(node.getName(), sid))
         return False
     
     count = node.setValueWithCount(value)
@@ -1863,12 +1874,12 @@ def implementationsOf(sid):
         print 'implementationsOf("{0}")'.format(sid)
 
     if not CommonApplication.isObjectById(sid):
-        print 'ERROR: Node not found, implementationsOf("{0}") returns 0'.format(sid)
+        CommonApplication.reportError('Node not found, implementationsOf("{0}") returns 0'.format(sid))
         return 0
     
     node = CommonApplication.getObjectById(sid)
     if node.getObjectType() != 'Interface':
-        print 'ERROR: Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid)
+        CommonApplication.reportError('Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid))
         return 0
         
     nodeValue = node.getValue()
