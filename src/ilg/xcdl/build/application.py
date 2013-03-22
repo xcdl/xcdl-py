@@ -225,9 +225,9 @@ class Application(CommonApplication):
         self.processRequiresProperties(repositoriesList, configNode, True)
         count = CommonApplication.getErrorCount()
         if count == 1:
-            raise ErrorWithDescription('1 requirement not satisfied, quitting')
+            raise ErrorWithDescription('Error or requirement not satisfied, cannot continue')
         elif count > 1:
-            raise ErrorWithDescription('{0} requirements not satisfied, quitting'.format(count))
+            raise ErrorWithDescription('Errors or requirements not satisfied, cannot continue')
 
         if self.verbosity > 1:
             print
