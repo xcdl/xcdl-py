@@ -66,6 +66,14 @@ class Configuration(Node):
         return
 
 
+    # -------------------------------------------------------------------------    
+    # just to keep dump tree happy
+    def getValueType(self):
+        
+        return None
+    
+    
+    # -------------------------------------------------------------------------    
     def isLoaded(self):
         
         return False

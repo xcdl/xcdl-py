@@ -78,6 +78,14 @@ class Toolchain(Node):
         return
     
 
+    # -------------------------------------------------------------------------    
+    # just to keep dump tree happy
+    def getValueType(self):
+        
+        return None
+    
+
+    # -------------------------------------------------------------------------    
     def getChildrenList(self):
         
         return self._childrenList
