@@ -1038,10 +1038,17 @@ class CommonApplication(object):
 
     def processTreeRequiresRecursive(self, node, depth, doReport):
 
+        if self.verbosity > 1:
+            print 'process {0}'.format(node.getId())
+
         if not node.isLoaded():
+            if self.verbosity > 1:
+                print 'not loaded'
             return
 
         if not node.isEnabled():
+            if self.verbosity > 1:
+                print 'not enabled'
             return
         
         requiresList = node.getRequiresList()
@@ -1052,8 +1059,8 @@ class CommonApplication(object):
                     # count errors
                     CommonApplication.addToErrorCount(1)
                     if doReport:
-                        CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\''.
-                               format(requires, node.getName()))
+                        CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\' ({2})'.
+                               format(requires, node.getName(), node.getId()))
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -1068,6 +1075,9 @@ class CommonApplication(object):
 
     def processConfigRequiresRecursive(self, node, depth, doReport):
 
+        if self.verbosity > 1:
+            print 'process {0}'.format(node.getId())
+            
         requiresList = node.getRequiresList()
         if requiresList != None:
             
