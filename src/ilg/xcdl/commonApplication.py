@@ -1670,6 +1670,15 @@ class CommonApplication(object):
         if self.verbosity > 0:
             print '- link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
 
+        f.write('# Run Target\n')
+        f.write('run: {0}\n'.format(artifactFileName))
+        f.write('\t@echo \'Running XCDL target: {0}\'\n'.format(artifactFileName))
+        toolParams = ''
+        f.write('\t@./{0} {1}\n'.format(artifactFileName, toolParams))
+        f.write('\t@echo \'Finished running target: {0}\'\n'.format(artifactFileName))
+        f.write('\t@echo \' \'\n')
+        f.write('\n')
+        
         f.write('# Other Targets\n')
         f.write('clean:\n')
         f.write('\t-$(RM) {0}$(CPP_DEPS) $(C_DEPS) $(S_DEPS) $(CUSTOM_EXECUTABLES) {1}\n'.format(objectsVariablesList, artifactFileName))
@@ -1679,7 +1688,7 @@ class CommonApplication(object):
         f.write('secondary-outputs: $(CUSTOM_EXECUTABLES)\n')
         f.write('\n')
 
-        f.write('.PHONY: all clean dependents\n')
+        f.write('.PHONY: all run clean dependents\n')
         f.write('.SECONDARY:\n')
         f.write('\n')
 
