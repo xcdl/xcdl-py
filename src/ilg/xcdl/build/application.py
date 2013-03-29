@@ -285,6 +285,7 @@ class Application(CommonApplication):
         print 'PATH={0}'.format(newPath)
         print
 
+        #makeCommand = ['make', '-j', self.makeTarget]
         makeCommand = ['make', self.makeTarget]
         print ' '.join(makeCommand)
         
