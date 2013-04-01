@@ -1266,7 +1266,9 @@ class CommonApplication(object):
         if artifactFileName == None:
             raise ErrorWithDescription('Missing artifact file name in configuration')
         
-        self.generateRootMakeFiles(sourcesDict, toolchainNode, artifactFileName, outputFolder, outputSubFolder)
+        count = CommonApplication.getErrorCount()
+        if count == 0:
+            self.generateRootMakeFiles(sourcesDict, toolchainNode, artifactFileName, outputFolder, outputSubFolder)
             
         return
 
@@ -1670,11 +1672,12 @@ class CommonApplication(object):
         if self.verbosity > 0:
             print '- link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
 
+        runArguments = ' '.join(self.runArguments)
+        
         f.write('# Run Target\n')
         f.write('run: {0}\n'.format(artifactFileName))
-        f.write('\t@echo \'Running XCDL target: {0}\'\n'.format(artifactFileName))
-        toolParams = ''
-        f.write('\t@./{0} {1}\n'.format(artifactFileName, toolParams))
+        f.write('\t@echo \'Running XCDL target: {0} {1}\'\n'.format(artifactFileName, runArguments))
+        f.write('\t@./{0} {1}\n'.format(artifactFileName, runArguments))
         f.write('\t@echo \'Finished running target: {0}\'\n'.format(artifactFileName))
         f.write('\t@echo \' \'\n')
         f.write('\n')

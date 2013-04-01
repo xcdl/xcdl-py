@@ -22,6 +22,12 @@ Params:
     -l, --linearise
         linearise the build subfolder to shorten the path. (default=True)
         
+    -Wm,...
+        'make' arguments pass arguments to make
+
+    -Wr,...
+        'run' arguments (copy them to makefile)
+        
     -v, --verbose
         print progress output; more occurences increase verbosity.
 
@@ -60,7 +66,10 @@ class Application(CommonApplication):
         
         self.doLinearise = True
         
+        self.makeArguments = []
         self.makeTarget = 'all'
+
+        self.runArguments = []
         
         # Not used, but should be present as None
         self.toolchainId = None
@@ -77,7 +86,7 @@ class Application(CommonApplication):
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'r:c:b:lhv',
+            (opts, args) = getopt.getopt(self.argv[1:], 'r:c:b:lW:hv',
                             [ 'repository=', 'build_config=', 'build_dir=',
                              'linearise', 'help', 'verbose'])
         except getopt.GetoptError as err:
@@ -112,13 +121,25 @@ class Application(CommonApplication):
                 elif o in ('-h', '--help'):
                     self.usage()
                     return 0
+                elif o in ('-W'):
+                    aa = a.split(',')
+                    if aa[0] == 'm':
+                        self.makeArguments = aa[1:]
+                    elif aa[0] == 'r':
+                        self.runArguments = aa[1:]
+                    else:
+                        assert False, 'option -W{0} not handled'.format(a)
                 elif o in ('all', 'clean'):
-                    print o
+                    #print o
+                    pass
                 else:
                     assert False, 'option not handled'
 
             CommonApplication.setVerbosity(self.verbosity)
             retval = self.process()
+
+        except Exception as err:
+            retval = 1
             
         except ErrorWithDescription as err:
             print 'ERROR: {0}'.format(err)
@@ -138,7 +159,7 @@ class Application(CommonApplication):
             raise ErrorWithDescription('Missing mandatory --repository parameter')
             
         if self.desiredConfigurationName == None:
-            raise ErrorWithDescription('Missing mandatory --name= parameter')
+            raise ErrorWithDescription('Missing mandatory --build_config parameter')
                                 
         return
 
@@ -238,6 +259,7 @@ class Application(CommonApplication):
                                                
         # print outputSubFolder
 
+        CommonApplication.clearErrorCount()
         if self.verbosity > 0:
             print
             print 'Generate header files...'
@@ -251,6 +273,10 @@ class Application(CommonApplication):
             print
             print 'Generate GNU Make files...'
         self.generateAllMakeFiles(repositoriesList, configNode, toolchainNode, self.outputFolder, outputSubFolder)
+        
+        count = CommonApplication.getErrorCount()
+        if count > 0:
+            raise Exception()
         
         return toolchainNode
 
@@ -285,8 +311,12 @@ class Application(CommonApplication):
         print 'PATH={0}'.format(newPath)
         print
 
-        #makeCommand = ['make', '-j', self.makeTarget]
-        makeCommand = ['make', self.makeTarget]
+        #print self.makeArguments
+        
+        makeCommand = ['make']
+        makeCommand.extend(self.makeArguments)
+        makeCommand.append(self.makeTarget)
+        
         print ' '.join(makeCommand)
         
         sys.stdout.flush()
