@@ -26,6 +26,13 @@ class Package(Component):
         if key in self._kwargs:
             self._buildIncludeFoldersList = self._kwargs[key]
             del self._kwargs[key]
+       
+        # TODO: use it in some macro expansions 
+        key = 'alias'
+        self._alias = None
+        if key in self._kwargs:
+            self._alias = self._kwargs[key]
+            del self._kwargs[key]
         
         return
     
