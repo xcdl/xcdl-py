@@ -26,6 +26,8 @@ class Toolchain(Node):
         'programNameSuffix',
 
         'makeObjectsVariable',
+        
+        'targetArchitecture',
     ]
     
     def __init__(self, **kwargs):
