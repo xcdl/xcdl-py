@@ -46,6 +46,7 @@ import sys
 
 from ilg.xcdl.commonApplication import CommonApplication
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
+from ilg.xcdl.errorWithDescription import ErrorWithoutDescription
 
 
 class Application(CommonApplication):
@@ -138,7 +139,7 @@ class Application(CommonApplication):
             CommonApplication.setVerbosity(self.verbosity)
             retval = self.process()
 
-        except Exception as err:
+        except ErrorWithoutDescription as err:
             retval = 1
             
         except ErrorWithDescription as err:
@@ -276,7 +277,7 @@ class Application(CommonApplication):
         
         count = CommonApplication.getErrorCount()
         if count > 0:
-            raise Exception()
+            raise ErrorWithoutDescription()
         
         return toolchainNode
 
