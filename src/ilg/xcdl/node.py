@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
-
+import ilg.xcdl.commonApplication
 
 class Node(object):
     
@@ -495,6 +495,18 @@ class ActiveNode(Node):
         self._isEnabled = isEnabled
         return count
 
+    def setIsEnabledWithCountRecursive(self, isEnabled=True):
+
+        if not self.isLoaded():
+            return 0
+        
+        count = 1 if (self._isEnabled != isEnabled) else 0
+        self._isEnabled = isEnabled
+        
+        if self._treeParent != None:
+            count += self._treeParent.setIsEnabledWithCountRecursive()
+
+        return count
 
     def getValueType(self):
         
@@ -689,14 +701,19 @@ class ActiveNode(Node):
         
     def computeSingleActiveIf(self, activeIf):
         
-        # TODO: implement
-        return True
-    
-
-    def computeSingleRequires(self, requires):
+        #print 'computeSingleActiveIf({0})'.format(activeIf)
         
-        # TODO: implement
-        return True
+        # TODO: accept expressions too
+        sid = activeIf
+        return ilg.xcdl.commonApplication.isActive(sid)
+
+
+#    def computeSingleRequires(self, requires):
+#        
+#        print 'computeSingleRequires({0})'.format(requires)
+#        
+#        # TODO: implement
+#        return True
 
         
     # climb the hierarchy until found
