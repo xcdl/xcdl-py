@@ -161,8 +161,8 @@ class CommonApplication(object):
 
 
     @staticmethod    
-    def reportError(str):
-        print 'ERROR: {0}'.format(str)
+    def reportError(stre):
+        print 'ERROR: {0}'.format(stre)
         CommonApplication.addToErrorCount()
         
         return
@@ -1019,7 +1019,12 @@ class CommonApplication(object):
 
     def processRequiresProperties(self, repositoriesList, configNode, doReport):
     
+        step = 0
         while True:
+            step += 1
+            if self.verbosity > 1:
+                print 'step {0}'.format(step)
+
             clearGlobalCount()
             
             # first process the configuration requirements
@@ -1046,21 +1051,21 @@ class CommonApplication(object):
                 print 'not loaded'
             return
 
-        if not node.isEnabled():
+        if  node.isEnabled():
+            requiresList = node.getRequiresList()
+            if requiresList != None:
+                
+                for requires in requiresList:
+                    if not eval(requires):
+                        # count errors
+                        CommonApplication.addToErrorCount(1)
+                        if doReport:
+                            CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\' ({2})'.
+                                   format(requires, node.getName(), node.getId()))
+        
+        else:
             if self.verbosity > 1:
                 print 'not enabled'
-            return
-        
-        requiresList = node.getRequiresList()
-        if requiresList != None:
-            
-            for requires in requiresList:
-                if not eval(requires):
-                    # count errors
-                    CommonApplication.addToErrorCount(1)
-                    if doReport:
-                        CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\' ({2})'.
-                               format(requires, node.getName(), node.getId()))
             
         children = node.getTreeChildrenList()
         if children == None:
@@ -1247,7 +1252,11 @@ class CommonApplication(object):
 
 
     def generateAllMakeFiles(self, repositoriesList, configNode, toolchainNode, outputFolder, outputSubFolder):
-        
+
+        artefactName = configNode.getArtefactNameRecursive()
+        if artefactName == None:
+            raise ErrorWithDescription('Missing artefactName in configuration')
+                
         # build a dictionary of sources, grouped by folder relative path
         sourcesDict = self.buildSourcesDict(repositoriesList)
         
@@ -1262,13 +1271,9 @@ class CommonApplication(object):
             
             self.generateSubdirMk(sourcesDict, folderAbsolutePath, folderRelativePath, configNode, toolchainNode, outputFolder, outputSubFolder)
         
-        artifactFileName = configNode.getArtifactFileNameRecursive()
-        if artifactFileName == None:
-            raise ErrorWithDescription('Missing artifact file name in configuration')
-        
         count = CommonApplication.getErrorCount()
         if count == 0:
-            self.generateRootMakeFiles(sourcesDict, toolchainNode, artifactFileName, outputFolder, outputSubFolder)
+            self.generateRootMakeFiles(sourcesDict, toolchainNode, configNode, outputFolder, outputSubFolder)
             
         return
 
@@ -1297,6 +1302,8 @@ class CommonApplication(object):
         allList.extend(cppList)
         allList.extend(cList)
         allList.extend(sList)
+        
+        buildTargetCpuOptions = configNode.getBuildTargetCpuOptionsRecursive()
         
         makeObjectsVariable = toolchainNode.getPropertyRecursiveWithDefault('makeObjectsVariable')
  
@@ -1424,6 +1431,9 @@ class CommonApplication(object):
                 for includeAbsolutePath in includeAbsolutePathList:
                     f.write(' -I"{0}"'.format(includeAbsolutePath))
                 
+                if buildTargetCpuOptions != None:
+                    f.write(' {0}'.format(buildTargetCpuOptions))
+                            
                 compilerCpu = toolchainNode.getPropertyRecursive('compilerCpu')
                 if compilerCpu != None:
                     f.write(' {0}'.format(compilerCpu))
@@ -1540,7 +1550,14 @@ class CommonApplication(object):
 
 
 
-    def generateRootMakeFiles(self, sourcesDict, toolchainNode, artifactFileName, outputFolder, outputSubFolder):
+    def generateRootMakeFiles(self, sourcesDict, toolchainNode, configNode, outputFolder, outputSubFolder):
+
+        artefactName = configNode.getArtefactNameRecursive()
+        artefactExtension = configNode.getArtefactExtensionRecursive()
+        if artefactExtension == None:
+            artefactExtension = 'elf'
+        
+        artefactFileName = '{0}.{1}'.format(artefactName, artefactExtension)
         
         makefileAbsolutePath = os.path.join(outputFolder, outputSubFolder, 'makefile')
         
@@ -1571,7 +1588,7 @@ class CommonApplication(object):
         f.write('\n')
 
         f.write('# The default target\n')
-        f.write('all: {0} secondary-outputs\n'.format(artifactFileName))
+        f.write('all: {0} secondary-outputs\n'.format(artefactFileName))
         f.write('\n')
 
         f.write('# Initialise variables to collect sources\n')              
@@ -1646,11 +1663,16 @@ class CommonApplication(object):
             toolOptions = ''  # empty default tool options
 
         f.write('# Tool invocations\n')
-        f.write('{0}: {1}$(USER_OBJS)\n'.format(artifactFileName, objectsVariablesList))
+        f.write('{0}: {1}$(USER_OBJS)\n'.format(artefactFileName, objectsVariablesList))
         f.write('\t@echo \'Linking XCDL target: $@\'\n')
         f.write('\t@echo \'Invoking: {0}\'\n'.format(toolDesc))
         
         f.write('\t{0}'.format(toolPgmName));
+        
+        buildTargetCpuOptions = configNode.getBuildTargetCpuOptionsRecursive()
+        if buildTargetCpuOptions != None:
+            f.write(' {0}'.format(buildTargetCpuOptions))
+        
         compilerCpu = toolchainNode.getPropertyRecursive('compilerCpu')
         if compilerCpu != None:
             f.write(' {0}'.format(compilerCpu))
@@ -1660,7 +1682,7 @@ class CommonApplication(object):
             
         f.write(' {0}'.format(linkerMiscOptions))
         f.write(' {0}'.format(toolOptions))
-        f.write(' -o "{0}"'.format(artifactFileName))
+        f.write(' -o "{0}"'.format(artefactFileName))
                 
         f.write(' {0}'.format(objectsVariablesList))
         f.write('$(USER_OBJS) $(LIBS)\n')
@@ -1670,21 +1692,23 @@ class CommonApplication(object):
         f.write('\n')
 
         if self.verbosity > 0:
-            print '- link \'{0}\' with \'{1}\''.format(artifactFileName, toolDesc)
+            print '- link \'{0}\' with \'{1}\''.format(artefactFileName, toolDesc)
 
         runArguments = ' '.join(self.runArguments)
         
-        f.write('# Run Target\n')
-        f.write('run: {0}\n'.format(artifactFileName))
-        f.write('\t@echo \'Running XCDL target: {0} {1}\'\n'.format(artifactFileName, runArguments))
-        f.write('\t@./{0} {1}\n'.format(artifactFileName, runArguments))
-        f.write('\t@echo \'Finished running target: {0}\'\n'.format(artifactFileName))
-        f.write('\t@echo \' \'\n')
-        f.write('\n')
+        # Run only when there is no target cpu defined
+        if buildTargetCpuOptions == None:        
+            f.write('# Run Target\n')
+            f.write('run: {0}\n'.format(artefactFileName))
+            f.write('\t@echo \'Running XCDL target: {0} {1}\'\n'.format(artefactFileName, runArguments))
+            f.write('\t@./{0} {1}\n'.format(artefactFileName, runArguments))
+            f.write('\t@echo \'Finished running target: {0}\'\n'.format(artefactFileName))
+            f.write('\t@echo \' \'\n')
+            f.write('\n')
         
         f.write('# Other Targets\n')
         f.write('clean:\n')
-        f.write('\t-$(RM) {0}$(CPP_DEPS) $(C_DEPS) $(S_DEPS) $(CUSTOM_EXECUTABLES) {1}\n'.format(objectsVariablesList, artifactFileName))
+        f.write('\t-$(RM) {0}$(CPP_DEPS) $(C_DEPS) $(S_DEPS) $(CUSTOM_EXECUTABLES) {1}\n'.format(objectsVariablesList, artefactFileName))
         f.write('\t@echo \' \'\n')
         f.write('\n')
         
@@ -1765,14 +1789,15 @@ def enable(sid):
         CommonApplication.reportError('Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid))
         return False
         
-    count = node.setIsEnabledWithCount()
+    #count = node.setIsEnabledWithCount()
+    count = node.setIsEnabledWithCountRecursive()
 
     if count > 0 and CommonApplication.getVerbosity() > 0:
         symbolName = node.getHeaderDefinition()
         if symbolName != None:
-            print '- {0} \'{1}\' ({2}) enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
+            print '- {0} \'{1}\' ({2}) and parents enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
         else:
-            print '- {0} \'{1}\' enabled'.format(node.getObjectType().lower(), node.getName())
+            print '- {0} \'{1}\' and parents enabled'.format(node.getObjectType().lower(), node.getName())
         
     addToGlobalCount(count)
     
