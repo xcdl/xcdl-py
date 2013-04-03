@@ -39,10 +39,16 @@ class Configuration(Node):
             self._loadPackagesList = self._kwargs[key]
             del self._kwargs[key]
 
-        key = 'artifactFileName'
-        self._artifactFileName = None
+        key = 'artefactName'
+        self._artefactName = None
         if key in self._kwargs:
-            self._artifactFileName = self._kwargs[key]
+            self._artefactName = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'artefactExtension'
+        self._artefactExtension = None
+        if key in self._kwargs:
+            self._artefactExtension = self._kwargs[key]
             del self._kwargs[key]
 
         key = 'toolchain'
@@ -61,6 +67,18 @@ class Configuration(Node):
         self._requiresList = None
         if key in self._kwargs:
             self._requiresList = self.enforceListOfStrings(self._kwargs[key], self._id, key)
+            del self._kwargs[key]
+
+        key = 'includeFiles'
+        self._includesList = None
+        if key in self._kwargs:
+            self._includesList = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'buildTargetCpuOptions'
+        self._buildTargetCpuOptions = None
+        if key in self._kwargs:
+            self._buildTargetCpuOptions = self._kwargs[key]
             del self._kwargs[key]
             
         return
@@ -102,23 +120,48 @@ class Configuration(Node):
     def getChildrenList(self):
         
         return self._childrenList
+    
 
-
-    def getArtifactFileName(self):
+    def getArtefactName(self):
         
-        return self._artifactFileName
+        return self._artefactName
 
 
-    def getArtifactFileNameRecursive(self):
+    def getArtefactNameRecursive(self):
         
-        if self._artifactFileName != None:
-            return self._artifactFileName
+        if self._artefactName != None:
+            return self._artefactName
         
-        if self._treeParent != None:
-            return self._treeParent.getArtifactFileNameRecursive()
+        if self._treeParent != None and self._treeParent.getObjectType() == 'Configuration':
+            return self._treeParent.getArtefactNameRecursive()
         
         return None
+
     
+    def getArtefactExtension(self):
+        
+        return self._artefactExtension
+
+
+    def getArtefactExtensionRecursive(self):
+        
+        if self._artefactExtension != None:
+            return self._artefactExtension
+        
+        if self._treeParent != None and self._treeParent.getObjectType() == 'Configuration':
+            return self._treeParent.getArtefactExtensionRecursive()
+        
+        return None
+
+
+    def getArtefactExtensionRecursiveWithDefault(self):
+        
+        ext = self.getArtefactExtensionRecursive()
+        if ext != None:
+            return ext
+        
+        return 'elf'
+        
 
     def getBuildFolderRecursiveWithSubstitutions(self):
         
@@ -136,7 +179,7 @@ class Configuration(Node):
 
         # must perform substitution
         newStr = ''
-        if self._treeParent != None:
+        if self._treeParent != None and self._treeParent.getObjectType() == 'Configuration':
             # get parent value
             newStr = self._treeParent.getBuildFolderRecursiveWithSubstitutions()
             
@@ -157,7 +200,27 @@ class Configuration(Node):
     def getRequiresList(self):
         
         return self._requiresList
+
     
-    
+    def getBuildTargetCpuOptions(self):
+        
+        return self._buildTargetCpuOptions
+
+
+    def getBuildTargetCpuOptionsRecursive(self):
+        
+        if self._buildTargetCpuOptions != None:
+            return self._buildTargetCpuOptions
+        
+        if self._treeParent != None and self._treeParent.getObjectType() == 'Configuration':
+            return self._treeParent.getBuildTargetCpuOptionsRecursive()
+        
+        return None
+
+        
+    # -------------------------------------------------------------------------    
+    def getIncludesList(self):
+        
+        return self._includesList
 
         
