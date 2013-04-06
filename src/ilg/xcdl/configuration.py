@@ -80,6 +80,12 @@ class Configuration(Node):
         if key in self._kwargs:
             self._buildTargetCpuOptions = self._kwargs[key]
             del self._kwargs[key]
+
+        key = 'copyFiles'
+        self._copyFilesList = None
+        if key in self._kwargs:
+            self._copyFilesList = self._kwargs[key]
+            del self._kwargs[key]
             
         return
 
@@ -223,4 +229,8 @@ class Configuration(Node):
         
         return self._includesList
 
+
+    def getCopyFilesList(self):
+        
+        return self._copyFilesList
         

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import shutil
 
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
 from ilg.xcdl.node import Node
@@ -154,7 +155,7 @@ class CommonApplication(object):
 
 
     @staticmethod    
-    def addToErrorCount(count = 1):
+    def addToErrorCount(count=1):
         
         CommonApplication.errorCount += count
         return
@@ -495,6 +496,9 @@ class CommonApplication(object):
         # store current object in the global dictionary    
         CommonApplication.insertObject(node)
 
+        # remember the current script path
+        node.setScriptAbsolutePath(scriptAbsolutePath)
+        
         if node.getObjectType() == 'Configuration':
             # store current configuration in the global dictionary    
             CommonApplication.insertConfigurationByName(node)
@@ -1251,7 +1255,64 @@ class CommonApplication(object):
         return
 
 
-    def generateAllMakeFiles(self, repositoriesList, configNode, toolchainNode, outputFolder, outputSubFolder):
+    def copyCustomFiles(self, repositoriesList, configNode, outputFolder, outputSubFolder):
+
+        # simple implementation, process only Configuration nodes
+        
+        node = configNode
+        while node != None and node.getObjectType() == 'Configuration':
+            
+            if self.verbosity > 1:
+                print 'process {0}'.format(node.getName())
+            
+            copyFilesList = node.getCopyFilesList()
+            self.processCopyFilesList(copyFilesList, configNode, outputFolder, outputSubFolder)
+                  
+            node = node.getTreeParent()
+            
+        return
+    
+    
+    def processCopyFilesList(self, copyFilesList, configNode, outputFolder, outputSubFolder):
+
+        if copyFilesList != None and len(copyFilesList) > 0:
+            if self.verbosity > 1:
+                print 'copyFilesList {0}'.format(copyFilesList)
+                
+            for copyFile in copyFilesList:
+                if len(copyFile) >= 2:
+                    srcFileName = copyFile[0]
+                    dstFileName = copyFile[1]
+                else:
+                    srcFileName = copyFile[0]
+                    dstFileName = copyFile[0]
+                                        
+                (scriptAbsoluteFolderPath, _) = os.path.split(
+                                    configNode.getScriptAbsolutePath())
+                srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
+                                                   srcFileName)
+                if not os.path.isfile(srcAbsoluteFileName):
+                    raise ErrorWithDescription('copy source {0} not a file'.format(srcFileName))
+             
+                dstAbsoluteFileName = os.path.abspath(os.path.join(
+                            outputFolder, outputSubFolder, dstFileName))
+                (dstAbsoluteFolderPath, _) = os.path.split(dstAbsoluteFileName)
+                if not os.path.isdir(dstAbsoluteFolderPath):
+                    if self.verbosity > 1:
+                        print('Create folder \'{0}\''.format(dstAbsoluteFolderPath))
+                    os.makedirs(dstAbsoluteFolderPath)
+                
+                if self.verbosity > 1:
+                    print('Copy file \'{0}\' to \'{1}\''.format(
+                                srcAbsoluteFileName, dstAbsoluteFileName))
+                
+                shutil.copyfile(srcAbsoluteFileName, dstAbsoluteFileName)
+                
+        return
+        
+        
+    def generateAllMakeFiles(self, repositoriesList, configNode, toolchainNode, 
+                             outputFolder, outputSubFolder):
 
         artefactName = configNode.getArtefactNameRecursive()
         if artefactName == None:
@@ -1263,22 +1324,28 @@ class CommonApplication(object):
         # iterate all folders
         for folderRelativePath in sourcesDict.iterkeys():
             
-            folderAbsolutePath = os.path.abspath(os.path.join(outputFolder, outputSubFolder, folderRelativePath))
+            folderAbsolutePath = os.path.abspath(os.path.join(outputFolder, 
+                                    outputSubFolder, folderRelativePath))
             if not os.path.isdir(folderAbsolutePath):
                 if self.verbosity > 1:
                     print('Create folder \'{0}\''.format(folderAbsolutePath))
                 os.makedirs(folderAbsolutePath)
             
-            self.generateSubdirMk(sourcesDict, folderAbsolutePath, folderRelativePath, configNode, toolchainNode, outputFolder, outputSubFolder)
+            self.generateSubdirMk(sourcesDict, folderAbsolutePath, 
+                                  folderRelativePath, configNode, toolchainNode, 
+                                  outputFolder, outputSubFolder)
         
         count = CommonApplication.getErrorCount()
         if count == 0:
-            self.generateRootMakeFiles(sourcesDict, toolchainNode, configNode, outputFolder, outputSubFolder)
+            self.generateRootMakeFiles(sourcesDict, toolchainNode, configNode, 
+                                       outputFolder, outputSubFolder)
             
         return
 
     
-    def generateSubdirMk(self, sourcesDict, folderAbsolutePath, folderRelativePath, configNode, toolchainNode, outputFolder, outputSubFolder):
+    def generateSubdirMk(self, sourcesDict, folderAbsolutePath, 
+                         folderRelativePath, configNode, toolchainNode, 
+                         outputFolder, outputSubFolder):
         
         subdirAbsolutePath = os.path.join(folderAbsolutePath, 'subdir.mk')
         
@@ -1319,7 +1386,8 @@ class CommonApplication(object):
                 fileNameComplete = source['fileName']
                 (fileName, _) = os.path.splitext(fileNameComplete)
                 
-                p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, compilerObjectsExtension))
+                p = os.path.join(folderRelativePath, '{0}.{1}'.format(fileName, 
+                                                    compilerObjectsExtension))
                 sourceAbsolutePath = source['sourceAbsolutePath']
                 
                 toolStandard = None;
@@ -1582,7 +1650,7 @@ class CommonApplication(object):
         objectsVariablesList += '$({0}) '.format(makeObjectsVariable)
             
         f.write('\n')
-        f.write('-include ../makefile.init\n')        
+        f.write('-include makefile_init.mk\n')        
         f.write('\n')
         f.write('-RM := {0} -rf\n'.format('rm'))        
         f.write('\n')
@@ -1640,7 +1708,7 @@ class CommonApplication(object):
         f.write('endif\n')
         f.write('\n')
         
-        f.write('-include ../makefile.defs\n')
+        f.write('-include makefile_defs.mk\n')
         f.write('\n')
 
         f.write('# Add inputs and outputs from these tool invocations to the build variables\n')
@@ -1719,7 +1787,7 @@ class CommonApplication(object):
         f.write('.SECONDARY:\n')
         f.write('\n')
 
-        f.write('-include ../makefile.targets\n')
+        f.write('-include makefile_targets.mk\n')
         f.write('\n')
         
         f.close()
@@ -1789,7 +1857,7 @@ def enable(sid):
         CommonApplication.reportError('Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid))
         return False
         
-    #count = node.setIsEnabledWithCount()
+    # count = node.setIsEnabledWithCount()
     count = node.setIsEnabledWithCountRecursive()
 
     if count > 0 and CommonApplication.getVerbosity() > 0:

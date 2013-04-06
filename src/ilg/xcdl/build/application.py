@@ -22,6 +22,9 @@ Params:
     -l, --linearise
         linearise the build subfolder to shorten the path. (default=True)
         
+    -a, --always
+        always generate the build tree, regardless of the timestamps
+        
     -Wm,...
         'make' arguments pass arguments to make
 
@@ -43,6 +46,7 @@ import os
 import getopt
 import time
 import sys
+import traceback
 
 from ilg.xcdl.commonApplication import CommonApplication
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
@@ -72,6 +76,8 @@ class Application(CommonApplication):
 
         self.runArguments = []
         
+        self.ignoreTimestamps = False
+        
         # Not used, but should be present as None
         self.toolchainId = None
         
@@ -87,9 +93,9 @@ class Application(CommonApplication):
     def run(self):
         
         try:
-            (opts, args) = getopt.getopt(self.argv[1:], 'r:c:b:lW:hv',
+            (opts, args) = getopt.getopt(self.argv[1:], 'r:c:b:lW:hva',
                             [ 'repository=', 'build_config=', 'build_dir=',
-                             'linearise', 'help', 'verbose'])
+                             'linearise', 'help', 'verbose', 'always'])
         except getopt.GetoptError as err:
             # print help information and exit:
             print str(err)  # will print something like "option -a not recognised"
@@ -117,6 +123,8 @@ class Application(CommonApplication):
                     self.outputFolder = a
                 elif o in ('-l', '--linearise'):
                     self.doLinearise = True
+                elif o in ('-a', '--always'):
+                    self.ignoreTimestamps = True
                 elif o in ('-v', '--verbose'):
                     self.verbosity += 1
                 elif o in ('-h', '--help'):
@@ -139,13 +147,18 @@ class Application(CommonApplication):
             CommonApplication.setVerbosity(self.verbosity)
             retval = self.process()
 
+        except Exception:
+            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc()
+            retval = 3
+
         except ErrorWithoutDescription as err:
             retval = 1
             
         except ErrorWithDescription as err:
             print 'ERROR: {0}'.format(err)
             retval = 1
-    
+
         finally:
             if self.verbosity > 0:
                 print   
@@ -202,7 +215,9 @@ class Application(CommonApplication):
         
         (toolchainNode, _) = self.validateToolchain(configNode)
 
-        if rootMakeFileUpdateTime > CommonApplication.maxScriptUpdateTime:
+        # TODO: consider original copyFiles time
+        
+        if not self.ignoreTimestamps and rootMakeFileUpdateTime > CommonApplication.maxScriptUpdateTime:
             if self.verbosity > 0:
                 print
                 print 'The XCDL files did not change since last build, no need to recreate the build tree.'
@@ -268,11 +283,18 @@ class Application(CommonApplication):
         
         if self.verbosity > 0:
             print
+            print 'Copy custom files...'
+        self.copyCustomFiles(repositoriesList, configNode, self.outputFolder, outputSubFolder)
+
+        if self.verbosity > 0:
+            print
             print 'Using toolchain \'{0}\'.'.format(toolchainNode.getName())
             
         if self.verbosity > 0:
             print
             print 'Generate GNU Make files...'
+            
+        # 'makefile' must be the last file written
         self.generateAllMakeFiles(repositoriesList, configNode, toolchainNode, self.outputFolder, outputSubFolder)
         
         count = CommonApplication.getErrorCount()
