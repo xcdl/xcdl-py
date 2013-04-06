@@ -56,6 +56,8 @@ class Node(object):
         # can be set only in Repository object
         self._sourcesPathsList = None
         
+        # the file where this node is located
+        self._scriptAbsolutePath = None
         
         # ---------------------------------------------------------------------
         # main properties id, name, description
@@ -233,6 +235,18 @@ class Node(object):
             return None
         
         return self._treeParent.getPackageTreeNode()
+
+    # -------------------------------------------------------------------------
+
+    def setScriptAbsolutePath(self, absolutePath):
+        
+        self._scriptAbsolutePath = absolutePath
+        return
+
+
+    def getScriptAbsolutePath(self):
+        
+        return self._scriptAbsolutePath
 
     # -------------------------------------------------------------------------
     # support for simple objects, to avoid additional tests
