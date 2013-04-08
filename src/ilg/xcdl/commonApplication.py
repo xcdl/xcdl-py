@@ -502,7 +502,29 @@ class CommonApplication(object):
         if node.getObjectType() == 'Configuration':
             # store current configuration in the global dictionary    
             CommonApplication.insertConfigurationByName(node)
+
+        # check copyFiles 
+        copyFilesList = node.getCopyFilesList()
+        if copyFilesList != None:
             
+            for copyFile in copyFilesList:                
+                if len(copyFile) >= 2:
+                    srcConfigFileName = copyFile[0].strip()
+                else:
+                    raise ErrorWithDescription('Destination missing in \'{0}\', node \'{1}\''.format(copyFile, node.getName()))
+                
+                (scriptAbsoluteFolderPath, _) = os.path.split(node.getScriptAbsolutePath())
+                srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
+                                                   srcConfigFileName)
+                
+                if not os.path.isfile(srcAbsoluteFileName):
+                    raise ErrorWithDescription('copy source {0} not a file in node \'{1}\''.format(srcConfigFileName, node.getName()))
+                
+                # compute latest updated file
+                tmtime = os.path.getmtime(srcAbsoluteFileName)
+                if tmtime > CommonApplication.maxScriptUpdateTime:
+                    CommonApplication.maxScriptUpdateTime = tmtime
+                   
         # process inner scripts        
         scriptsList = node.getIncludesList()
         if scriptsList != None:
@@ -1302,19 +1324,14 @@ class CommonApplication(object):
                 print 'copyFilesList {0}'.format(copyFilesList)
                 
             for copyFile in copyFilesList:
-                if len(copyFile) >= 2:
-                    srcConfigFileName = copyFile[0].strip()
-                    dstConfigFileName = copyFile[1].strip()
-                else:
-                    raise ErrorWithDescription('Destination missing in \'{0}\''.format(copyFile))
+                srcConfigFileName = copyFile[0].strip()
+                dstConfigFileName = copyFile[1].strip()
                                         
                 (scriptAbsoluteFolderPath, _) = os.path.split(
                                     node.getScriptAbsolutePath())
                 srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
                                                    srcConfigFileName)
-                if not os.path.isfile(srcAbsoluteFileName):
-                    raise ErrorWithDescription('copy source {0} not a file'.format(srcConfigFileName))
-             
+
                 dstAbsoluteFilePath = os.path.abspath(os.path.join(
                             outputFolder, outputSubFolder, dstConfigFileName))
 
