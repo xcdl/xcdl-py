@@ -193,8 +193,10 @@ class Application(CommonApplication):
         
         self.validate()
         
+        # parse all repository trees
         repositoriesList = self.parseRepositories(self.packagesAbsolutePathList, 0)
-
+        # all is in memory, including the maxScriptUpdateTime
+        
         if self.verbosity > 0:
             print             
             print 'Latest XCDL files modified time: {0}'.format(time.ctime(CommonApplication.maxScriptUpdateTime))
@@ -215,8 +217,6 @@ class Application(CommonApplication):
         
         (toolchainNode, _) = self.validateToolchain(configNode)
 
-        # TODO: consider original copyFiles time
-        
         if not self.ignoreTimestamps and rootMakeFileUpdateTime > CommonApplication.maxScriptUpdateTime:
             if self.verbosity > 0:
                 print
