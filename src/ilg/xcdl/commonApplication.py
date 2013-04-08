@@ -1255,9 +1255,42 @@ class CommonApplication(object):
         return
 
 
+    def getRepositoriesListActiveNodesGenerator(self, repositoriesList):
+        
+        for tree in repositoriesList:
+            for node in self.getRepositoryActiveNodesGeneratorRecursive(tree, 0):
+                yield node
+
+    # iterate the current node and then all children nodes
+    def getRepositoryActiveNodesGeneratorRecursive(self, node, depth):
+        
+        if not node.isEnabled():
+            return
+        
+        if node.isActive():
+            yield node
+        
+        children = node.getTreeChildrenList()
+        if children == None:
+            return
+        
+        # iterate through all children
+        for child in children:           
+            for node in self.getRepositoryActiveNodesGeneratorRecursive(child, depth + 1):
+                yield node           
+    
+        return
+    
+
     def copyCustomFiles(self, repositoriesList, configNode, outputFolder, outputSubFolder):
 
         # simple implementation, process only Configuration nodes
+        for node in self.getRepositoriesListActiveNodesGenerator(repositoriesList):
+            if self.verbosity > 1:
+                print 'process {0}'.format(node.getName())
+            
+            copyFilesList = node.getCopyFilesList()
+            self.processCopyFilesList(copyFilesList, node, outputFolder, outputSubFolder)
         
         node = configNode
         while node != None and node.getObjectType() == 'Configuration':
@@ -1273,7 +1306,7 @@ class CommonApplication(object):
         return
     
     
-    def processCopyFilesList(self, copyFilesList, configNode, outputFolder, outputSubFolder):
+    def processCopyFilesList(self, copyFilesList, node, outputFolder, outputSubFolder):
 
         if copyFilesList != None and len(copyFilesList) > 0:
             if self.verbosity > 1:
@@ -1281,32 +1314,44 @@ class CommonApplication(object):
                 
             for copyFile in copyFilesList:
                 if len(copyFile) >= 2:
-                    srcFileName = copyFile[0]
-                    dstFileName = copyFile[1]
+                    srcConfigFileName = copyFile[0].strip()
+                    dstConfigFileName = copyFile[1].strip()
                 else:
-                    srcFileName = copyFile[0]
-                    dstFileName = copyFile[0]
+                    raise ErrorWithDescription('Destination missing in \'{0}\''.format(copyFile))
                                         
                 (scriptAbsoluteFolderPath, _) = os.path.split(
-                                    configNode.getScriptAbsolutePath())
+                                    node.getScriptAbsolutePath())
                 srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
-                                                   srcFileName)
+                                                   srcConfigFileName)
                 if not os.path.isfile(srcAbsoluteFileName):
-                    raise ErrorWithDescription('copy source {0} not a file'.format(srcFileName))
+                    raise ErrorWithDescription('copy source {0} not a file'.format(srcConfigFileName))
              
-                dstAbsoluteFileName = os.path.abspath(os.path.join(
-                            outputFolder, outputSubFolder, dstFileName))
-                (dstAbsoluteFolderPath, _) = os.path.split(dstAbsoluteFileName)
+                print dstConfigFileName
+                dstAbsoluteFilePath = os.path.abspath(os.path.join(
+                            outputFolder, outputSubFolder, dstConfigFileName))
+                print dstAbsoluteFilePath
+
+                (_, dstFileName) = os.path.split(dstConfigFileName)
+                print dstFileName
+                if len(dstFileName) == 0:
+                    dstAbsoluteFolderPath = dstAbsoluteFilePath
+                    (_,dstAbsoluteFileName) = os.path.split(srcAbsoluteFileName)
+                    dstAbsoluteFilePath = os.path.join(dstAbsoluteFilePath, dstAbsoluteFileName)
+                    print dstAbsoluteFileName
+                else:
+                    (dstAbsoluteFolderPath, _) = os.path.split(dstAbsoluteFilePath)
+                    print dstAbsoluteFolderPath
+                    
                 if not os.path.isdir(dstAbsoluteFolderPath):
                     if self.verbosity > 1:
                         print('Create folder \'{0}\''.format(dstAbsoluteFolderPath))
                     os.makedirs(dstAbsoluteFolderPath)
-                
+                                    
                 if self.verbosity > 1:
                     print('Copy file \'{0}\' to \'{1}\''.format(
-                                srcAbsoluteFileName, dstAbsoluteFileName))
+                                srcAbsoluteFileName, dstAbsoluteFilePath))
                 
-                shutil.copyfile(srcAbsoluteFileName, dstAbsoluteFileName)
+                shutil.copyfile(srcAbsoluteFileName, dstAbsoluteFilePath)
                 
         return
         
