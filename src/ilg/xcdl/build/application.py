@@ -204,7 +204,7 @@ class Application(CommonApplication):
             self.dumpTree(repositoriesList, False)
 
         configNode = self.getBuildConfigurationNode(self.desiredConfigurationName)
-
+        
         outputSubFolder = configNode.getBuildFolderRecursiveWithSubstitutions()
         if self.doLinearise:
             outputSubFolder = outputSubFolder.replace(os.sep, '_')
@@ -240,6 +240,10 @@ class Application(CommonApplication):
             print
         configNode = self.loadBuildConfiguration(configNode, 0)
 
+        # enable configuration nodes too, for a more uniform processing
+        # (of CopyFiles, for example)
+        configNode.setIsEnabledWithCountRecursive()
+        
         if self.verbosity > 0:
             print
             print 'Build preprocessor symbols dictionary...'
