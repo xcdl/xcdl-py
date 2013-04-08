@@ -1284,25 +1284,14 @@ class CommonApplication(object):
 
     def copyCustomFiles(self, repositoriesList, configNode, outputFolder, outputSubFolder):
 
-        # simple implementation, process only Configuration nodes
+        # iterate all nodes, including the Configuration nodes
         for node in self.getRepositoriesListActiveNodesGenerator(repositoriesList):
             if self.verbosity > 1:
                 print 'process {0}'.format(node.getName())
             
             copyFilesList = node.getCopyFilesList()
             self.processCopyFilesList(copyFilesList, node, outputFolder, outputSubFolder)
-        
-        node = configNode
-        while node != None and node.getObjectType() == 'Configuration':
-            
-            if self.verbosity > 1:
-                print 'process {0}'.format(node.getName())
-            
-            copyFilesList = node.getCopyFilesList()
-            self.processCopyFilesList(copyFilesList, configNode, outputFolder, outputSubFolder)
-                  
-            node = node.getTreeParent()
-            
+                    
         return
     
     
@@ -1326,21 +1315,16 @@ class CommonApplication(object):
                 if not os.path.isfile(srcAbsoluteFileName):
                     raise ErrorWithDescription('copy source {0} not a file'.format(srcConfigFileName))
              
-                print dstConfigFileName
                 dstAbsoluteFilePath = os.path.abspath(os.path.join(
                             outputFolder, outputSubFolder, dstConfigFileName))
-                print dstAbsoluteFilePath
 
                 (_, dstFileName) = os.path.split(dstConfigFileName)
-                print dstFileName
                 if len(dstFileName) == 0:
                     dstAbsoluteFolderPath = dstAbsoluteFilePath
                     (_,dstAbsoluteFileName) = os.path.split(srcAbsoluteFileName)
                     dstAbsoluteFilePath = os.path.join(dstAbsoluteFilePath, dstAbsoluteFileName)
-                    print dstAbsoluteFileName
                 else:
                     (dstAbsoluteFolderPath, _) = os.path.split(dstAbsoluteFilePath)
-                    print dstAbsoluteFolderPath
                     
                 if not os.path.isdir(dstAbsoluteFolderPath):
                     if self.verbosity > 1:
