@@ -236,8 +236,4 @@ class Configuration(Node):
         
         return self._includesList
 
-
-    def getCopyFilesList(self):
-        
-        return self._copyFilesList
         

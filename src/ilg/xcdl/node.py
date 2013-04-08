@@ -59,6 +59,8 @@ class Node(object):
         # the file where this node is located
         self._scriptAbsolutePath = None
 
+        self._copyFilesList = None
+
         # ---------------------------------------------------------------------
         self._isEnabled = self.getDefaultIsEnabled()
         
@@ -366,6 +368,12 @@ class Node(object):
     def getImplementsList(self):
         
         return None
+
+
+    # -------------------------------------------------------------------------
+    def getCopyFilesList(self):
+        
+        return self._copyFilesList
     
             
     # ???
@@ -828,6 +836,3 @@ class ActiveNode(Node):
         return self._linkPriority
     
 
-    def getCopyFilesList(self):
-        
-        return self._copyFilesList
