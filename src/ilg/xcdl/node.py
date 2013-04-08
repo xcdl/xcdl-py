@@ -58,6 +58,9 @@ class Node(object):
         
         # the file where this node is located
         self._scriptAbsolutePath = None
+
+        # ---------------------------------------------------------------------
+        self._isEnabled = self.getDefaultIsEnabled()
         
         # ---------------------------------------------------------------------
         # main properties id, name, description
@@ -249,13 +252,64 @@ class Node(object):
         return self._scriptAbsolutePath
 
     # -------------------------------------------------------------------------
-    # support for simple objects, to avoid additional tests
+    # a node is loaded if its parent package is loaded
+
+    def isLoaded(self):
+        
+        return self.getPackageTreeNode().isLoaded()
     
+    # -------------------------------------------------------------------------
     def isEnabled(self):
         
-        return False
+        # nodes need to be loaded to be enabled
+        if not self.isLoaded():
+            return False
+
+        # nodes need to have their parents enabled to be enabled
+        if self._treeParent != None:
+            if not self._treeParent.isEnabled():
+                return False
+            
+        return self._isEnabled
 
     
+    # return True if the value was set
+    def setIsEnabled(self, isEnabled=True):
+
+        if not self.isLoaded():
+            return False
+        
+        self._isEnabled = isEnabled
+        return True
+
+
+    # return 1 if the value was changed
+    def setIsEnabledWithCount(self, isEnabled=True):
+
+        if not self.isLoaded():
+            return 0
+        
+        count = 1 if (self._isEnabled != isEnabled) else 0
+        self._isEnabled = isEnabled
+        return count
+
+    def setIsEnabledWithCountRecursive(self, isEnabled=True):
+
+        if not self.isLoaded():
+            return 0
+        
+        count = 1 if (self._isEnabled != isEnabled) else 0
+        self._isEnabled = isEnabled
+        
+        if self._treeParent != None:
+            count += self._treeParent.setIsEnabledWithCountRecursive()
+
+        return count
+
+
+    # -------------------------------------------------------------------------
+    # support for simple objects, to avoid additional tests
+        
     def isActive(self):
         
         return False
@@ -296,6 +350,24 @@ class Node(object):
         return True
 
 
+    def getHeaderDefinition(self):
+        
+        return None
+
+
+    def getHeaderLineAndFileName(self):
+        
+        return None
+
+    def getSourceFilesList(self):
+        
+        return None
+
+    def getImplementsList(self):
+        
+        return None
+    
+            
     # ???
     # -------------------------------------------------------------------------
     # climb the hierarchy until found
@@ -491,53 +563,6 @@ class ActiveNode(Node):
         return True
     
     
-    def isEnabled(self):
-        
-        # nodes need to be loaded to be enabled
-        if not self.isLoaded():
-            return False
-
-        # nodes need to have their parents enabled to be enabled
-        if self._treeParent != None:
-            if not self._treeParent.isEnabled():
-                return False
-            
-        return self._isEnabled
-
-    
-    # return True if the value was set
-    def setIsEnabled(self, isEnabled=True):
-
-        if not self.isLoaded():
-            return False
-        
-        self._isEnabled = isEnabled
-        return True
-
-
-    # return 1 if the value was changed
-    def setIsEnabledWithCount(self, isEnabled=True):
-
-        if not self.isLoaded():
-            return 0
-        
-        count = 1 if (self._isEnabled != isEnabled) else 0
-        self._isEnabled = isEnabled
-        return count
-
-    def setIsEnabledWithCountRecursive(self, isEnabled=True):
-
-        if not self.isLoaded():
-            return 0
-        
-        count = 1 if (self._isEnabled != isEnabled) else 0
-        self._isEnabled = isEnabled
-        
-        if self._treeParent != None:
-            count += self._treeParent.setIsEnabledWithCountRecursive()
-
-        return count
-
     def getValueType(self):
         
         return self._valueType
@@ -717,11 +742,6 @@ class ActiveNode(Node):
         return (headerLine, headerFile)
 
 
-    # a node is loaded if its parent package is loaded
-    def isLoaded(self):
-        
-        return self.getPackageTreeNode().isLoaded()
-    
     
 
     def getImplementsList(self):
