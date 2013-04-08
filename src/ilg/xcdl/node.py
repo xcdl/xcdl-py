@@ -251,6 +251,16 @@ class Node(object):
     # -------------------------------------------------------------------------
     # support for simple objects, to avoid additional tests
     
+    def isEnabled(self):
+        
+        return False
+
+    
+    def isActive(self):
+        
+        return False
+    
+    
     # simple objects have no children
     def getChildrenList(self):
         
@@ -436,6 +446,12 @@ class ActiveNode(Node):
         self._implementsList = None
         if key in self._kwargs:
             self._implementsList = self._kwargs[key]
+            del self._kwargs[key]
+
+        key = 'copyFiles'
+        self._copyFilesList = None
+        if key in self._kwargs:
+            self._copyFilesList = self._kwargs[key]
             del self._kwargs[key]
             
         # ---------------------------------------------------------------------
@@ -791,3 +807,7 @@ class ActiveNode(Node):
         
         return self._linkPriority
     
+
+    def getCopyFilesList(self):
+        
+        return self._copyFilesList
