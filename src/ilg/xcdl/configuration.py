@@ -96,12 +96,19 @@ class Configuration(Node):
         
         return None
     
-    
+
     # -------------------------------------------------------------------------    
-    def isLoaded(self):
+    def getDefaultIsEnabled(self):
         
+        # configurations are disabled by default
         return False
     
+    # -------------------------------------------------------------------------    
+    def isActive(self):
+        
+        return True
+    
+    # -------------------------------------------------------------------------    
     
     def getOptionsList(self):
         
