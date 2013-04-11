@@ -979,7 +979,10 @@ class CommonApplication(object):
                         sourcesDict[buildPathString] = []
                     
                     crtSourceDict = {}
-                    crtSourceDict['fileName'] = sourceFile
+                    
+                    # in case of additional folders, skip them 
+                    (_, sourceFileName) = os.path.split(sourceFile)
+                    crtSourceDict['fileName'] = sourceFileName
                     crtSourceDict['buildPathList'] = buildPathList
                     crtSourceDict['sourceAbsolutePath'] = sourceAbsolutePath
                     crtSourceDict['repoNode'] = node
@@ -1506,10 +1509,13 @@ class CommonApplication(object):
                 if linkPriority != None:
                     prio = '_{0:02d}'.format(linkPriority)
                 
+                # append to objects variable (ex. OBJS)
                 f.write('{0}{1} += {2}\n'.format(makeObjectsVariable, prio, self.expandPathSpaces(objectRelativePath)))
             
+                # append to sources variable (ex. CPP_SRCS)
                 f.write('{0} += {1}\n'.format(typeSrcs, self.expandPathSpaces(sourceAbsolutePath)))
 
+                # append to dependencies variable (ex. CPP_DEPS)
                 depsRelativePath = os.path.join('.', folderRelativePath, '{0}.{1}'.format(fileName, 'd'))
                 f.write('{0} += {1}\n'.format(typeDeps, self.expandPathSpaces(depsRelativePath)))
 
