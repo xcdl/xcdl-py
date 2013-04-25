@@ -61,6 +61,8 @@ class Node(object):
 
         self._copyFilesList = None
 
+        self._wasProcessed = False
+        
         # ---------------------------------------------------------------------
         self._isEnabled = self.getDefaultIsEnabled()
         
@@ -369,7 +371,18 @@ class Node(object):
         
         return None
 
+    # -------------------------------------------------------------------------
 
+    def wasProcessed(self):
+        
+        return self._wasProcessed
+    
+    
+    def setWasProcessed(self):
+        
+        self._wasProcessed = True
+        
+        
     # -------------------------------------------------------------------------
     def getCopyFilesList(self):
         
@@ -625,8 +638,8 @@ class ActiveNode(Node):
             return float(valueString)
         else:
             return value
-        
-    
+
+
     def setValueWithCount(self, value):
         
         evaluatedValue = self._evaluateExpression(value)
@@ -802,11 +815,15 @@ class ActiveNode(Node):
             return '({0})'
 
 
+    # used to generate #define lines
     def getFormattedValue(self):
         
         formatString = self.getValueFormatWithDefault()
         valueWithType = self.getValueWithType()
-
+        #valueWithType = self.getValueAsString()
+        if isinstance(valueWithType, bool):
+            valueWithType = str(valueWithType).lower()
+        
         return formatString.format(valueWithType)
     
     
