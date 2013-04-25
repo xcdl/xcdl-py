@@ -170,6 +170,38 @@ class CommonApplication(object):
     
     # -------------------------------------------------------------------------    
     # static member
+    doReportFlag = True
+
+    @staticmethod    
+    def doReport():
+        
+        return CommonApplication.doReportFlag
+    
+
+    @staticmethod    
+    def setDoReport(doReport):
+        
+        CommonApplication.doReportFlag = doReport
+    
+
+    # -------------------------------------------------------------------------    
+    # static member
+    currentNode = None
+
+    @staticmethod    
+    def getCurrentNode():
+        
+        return CommonApplication.currentNode
+    
+
+    @staticmethod    
+    def setCurrentNode(node):
+        
+        CommonApplication.currentNode = node
+    
+    
+    # -------------------------------------------------------------------------    
+    # static member
     maxScriptUpdateTime = 0.0
     
     # -------------------------------------------------------------------------    
@@ -425,6 +457,9 @@ class CommonApplication(object):
     
     def processNode(self, node, parent, scriptAbsolutePath, packageLocation):
         
+        if node.wasProcessed():            
+            return
+        
         # check if the id was already used
         if  CommonApplication.isObjectById(node.getId()):
                 
@@ -432,8 +467,8 @@ class CommonApplication(object):
             oldName = oldObject.getName()
             oldDescription = oldObject.getDescription()
             
-            if (oldName == node.getName()) and (oldDescription == node.getDescription()):
-                return
+            #if (oldName == node.getName()) and (oldDescription == node.getDescription()):
+            #    return
             
             raise ErrorWithDescription('Id \'{0}\' \'{1}\' redefined (was \'{2}\')'.
                             format(node.getId(), node.getName(), oldName))
@@ -547,8 +582,16 @@ class CommonApplication(object):
         if childrenList != None:
             
             for child in childrenList:
+                pass
                 self.processNode(child, node, scriptAbsolutePath, packageLocation)
 
+        # for nodes added via separate scripts, the nodes are processed
+        # first in parseScript(), then added to the children list
+        # and then processNode() is called again.
+        
+        # to avoid this, mark that the node was processed
+        node.setWasProcessed();
+        
         return
     
     
@@ -954,7 +997,7 @@ class CommonApplication(object):
                             break
                         
                     if foundSourcePath == None:
-                        CommonApplication.reportError('source file: \'{0}\' not found'.format(sourceFile))
+                        CommonApplication.reportError('source file: \'{0}\' not found for node \'{1}\' ({2})'.format(sourceFile, node.getName(), node.getId()))
                         continue
                     
                     if not sourceAbsolutePath.startswith(rootPackageFolder):
@@ -1048,6 +1091,7 @@ class CommonApplication(object):
 
     def processRequiresProperties(self, repositoriesList, configNode, doReport):
     
+        CommonApplication.setDoReport(doReport)
         step = 0
         while True:
             step += 1
@@ -1057,11 +1101,11 @@ class CommonApplication(object):
             clearGlobalCount()
             
             # first process the configuration requirements
-            self.processConfigRequiresRecursive(configNode, 0, doReport)
+            self.processConfigRequiresRecursive(configNode, 0)
             
             # than the packages trees
             for tree in repositoriesList:
-                self.processTreeRequiresRecursive(tree, 0, doReport)
+                self.processTreeRequiresRecursive(tree, 0)
                 self.processImplementsPropertiesRecursive(tree, 0)
                             
             if getGlobalCount() == 0:
@@ -1070,7 +1114,7 @@ class CommonApplication(object):
         return
 
 
-    def processTreeRequiresRecursive(self, node, depth, doReport):
+    def processTreeRequiresRecursive(self, node, depth):
 
         if self.verbosity > 1:
             print 'process {0}'.format(node.getId())
@@ -1081,6 +1125,7 @@ class CommonApplication(object):
             return
 
         if  node.isEnabled():
+            CommonApplication.setCurrentNode(node)
             requiresList = node.getRequiresList()
             if requiresList != None:
                 
@@ -1088,7 +1133,7 @@ class CommonApplication(object):
                     if not eval(requires):
                         # count errors
                         CommonApplication.addToErrorCount(1)
-                        if doReport:
+                        if CommonApplication.doReport():
                             CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\' ({2})'.
                                    format(requires, node.getName(), node.getId()))
         
@@ -1102,12 +1147,12 @@ class CommonApplication(object):
     
         # iterate through all children
         for child in children:           
-            self.processTreeRequiresRecursive(child, depth + 1, doReport)            
+            self.processTreeRequiresRecursive(child, depth + 1)            
 
         return
 
 
-    def processConfigRequiresRecursive(self, node, depth, doReport):
+    def processConfigRequiresRecursive(self, node, depth):
 
         if self.verbosity > 1:
             print 'process {0}'.format(node.getId())
@@ -1117,7 +1162,7 @@ class CommonApplication(object):
             
             for requires in requiresList:
                 if not eval(requires):
-                    if doReport:
+                    if CommonApplication.doReport():
                         CommonApplication.reportError('Requirement \'{0}\' not satisfied for node \'{1}\''.
                                format(requires, node.getName()))
 
@@ -1125,7 +1170,7 @@ class CommonApplication(object):
         if parentNode == None:
             return
         
-        return self.processConfigRequiresRecursive(parentNode, depth + 1, doReport)
+        return self.processConfigRequiresRecursive(parentNode, depth + 1)
 
 
 
@@ -1888,7 +1933,12 @@ def addToGlobalCount(value):
     
     
 def enable(sid):
-        
+       
+    nodeMsg = '' 
+    node = CommonApplication.getCurrentNode()
+    if node != None:
+        nodeMsg = 'for node \'{0}\' ({1})'.format(node.getName(), node.getId())
+
     if CommonApplication.getVerbosity() > 1:
         print 'enable("{0}")'.format(sid)
         
@@ -1897,16 +1947,19 @@ def enable(sid):
     else:
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
-        else:  
-            CommonApplication.reportError('Node not found, enable("{0}") ignored'.format(sid))
+        else:
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, enable("{0}") ignored {1}'.format(sid, nodeMsg))
             return False
     
     if not node.isLoaded():
-        CommonApplication.reportError('Node \'{0}\' is not loaded, enable("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' is not loaded, enable("{1}") ignored {2}'.format(node.getName(), sid, nodeMsg))
         return False
 
     if not node.isConfigurableEvaluated():
-        CommonApplication.reportError('Node \'{0}\' is not configurable, enable("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' is not configurable, enable("{1}") ignored {2}'.format(node.getName(), sid, nodeMsg))
         return False
         
     # count = node.setIsEnabledWithCount()
@@ -1925,6 +1978,11 @@ def enable(sid):
 
 
 def disable(sid):
+
+    nodeMsg = '' 
+    node = CommonApplication.getCurrentNode()
+    if node != None:
+        nodeMsg = 'for node \'{0}\' ({1})'.format(node.getName(), node.getId())
         
     if CommonApplication.isObjectById(sid):
         node = CommonApplication.getObjectById(sid)
@@ -1932,15 +1990,18 @@ def disable(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            CommonApplication.reportError('Node not found, disable("{0}") ignored'.format(sid))
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, disable("{0}") ignored {1}'.format(sid, nodeMsg))
             return False
     
     if not node.isLoaded():
-        CommonApplication.reportError('Node \'{0}\' is not loaded, disable("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' is not loaded, disable("{1}") ignored {2}'.format(node.getName(), sid, nodeMsg))
         return False
 
     if not node.isConfigurableEvaluated():
-        CommonApplication.reportError('Node \'{0}\' is not configurable, disable("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' is not configurable, disable("{1}") ignored {2}'.format(node.getName(), sid, nodeMsg))
         return False
         
     count = node.setIsEnabledWithCount(False)
@@ -1965,7 +2026,8 @@ def isEnabled(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            CommonApplication.reportError('Node not found, isEnabled("{0}") return False'.format(sid))
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, isEnabled("{0}") return False'.format(sid))
             return False
         
     return node.isEnabled()
@@ -1979,7 +2041,8 @@ def isActive(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            CommonApplication.reportError('Node not found, isActive("{0}") return False'.format(sid))
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, isActive("{0}") return False'.format(sid))
             return False
         
     return node.isActive()
@@ -1993,7 +2056,8 @@ def valueOf(sid):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            CommonApplication.reportError('Node not found, valueOf("{0}") return 0'.format(sid))
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, valueOf("{0}") return 0'.format(sid))
             return False
         
     return node.getValueWithType()
@@ -2010,16 +2074,37 @@ def setValue(sid, value):
         if CommonApplication.isObjectBySymbol(sid):
             node = CommonApplication.getObjectBySymbol(sid)
         else:  
-            CommonApplication.reportError('Node not found, setValue("{0}") ignored'.format(sid))
+            if CommonApplication.doReport():  
+                CommonApplication.reportError('Node not found, setValue("{0}") ignored'.format(sid))
             return False
     
     if not node.isConfigurableEvaluated():
-        CommonApplication.reportError('Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' is not configurable, setValue("{1}") ignored'.format(node.getName(), sid))
         return False
 
     if node.getValueTypeWithDefault() == 'none':
-        CommonApplication.reportError('Node \'{0}\' has valueType=\'none\', setValue("{1}") ignored'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' has valueType=\'none\', setValue("{1}") ignored'.format(node.getName(), sid))
         return False
+
+    thisNode = CommonApplication.getCurrentNode()
+    if thisNode != None and thisNode.getObjectType() == 'Configuration':
+
+        # for configuration nodes, also enable parents
+        count = node.setIsEnabledWithCountRecursive()
+    else:
+        count = node.setIsEnabledWithCount()
+        
+        
+    if count > 0 and CommonApplication.getVerbosity() > 0:
+        symbolName = node.getHeaderDefinition()
+        if symbolName != None:
+            print '- {0} \'{1}\' ({2}) and parents enabled'.format(node.getObjectType().lower(), node.getName(), symbolName)
+        else:
+            print '- {0} \'{1}\' and parents enabled'.format(node.getObjectType().lower(), node.getName())
+        
+    addToGlobalCount(count)
     
     count = node.setValueWithCount(value)
     
@@ -2041,12 +2126,14 @@ def implementationsOf(sid):
         print 'implementationsOf("{0}")'.format(sid)
 
     if not CommonApplication.isObjectById(sid):
-        CommonApplication.reportError('Node not found, implementationsOf("{0}") returns 0'.format(sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node not found, implementationsOf("{0}") returns 0'.format(sid))
         return 0
     
     node = CommonApplication.getObjectById(sid)
     if node.getObjectType() != 'Interface':
-        CommonApplication.reportError('Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid))
+        if CommonApplication.doReport():  
+            CommonApplication.reportError('Node \'{0}\' not an interface, implementationsOf("{1}") returns 0'.format(node.getName(), sid))
         return 0
         
     nodeValue = node.getValue()
