@@ -147,17 +147,18 @@ class Application(CommonApplication):
             CommonApplication.setVerbosity(self.verbosity)
             retval = self.process()
 
-        except Exception:
-            traceback.print_exc(file=sys.stdout)
-            traceback.print_exc()
-            retval = 3
-
         except ErrorWithoutDescription as err:
             retval = 1
             
         except ErrorWithDescription as err:
             print 'ERROR: {0}'.format(err)
             retval = 1
+
+        except Exception:
+            if True:
+                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc()
+            retval = 3
 
         finally:
             if self.verbosity > 0:
@@ -265,10 +266,8 @@ class Application(CommonApplication):
         CommonApplication.clearErrorCount()
         self.processRequiresProperties(repositoriesList, configNode, True)
         count = CommonApplication.getErrorCount()
-        if count == 1:
-            raise ErrorWithDescription('Error or requirement not satisfied, cannot continue')
-        elif count > 1:
-            raise ErrorWithDescription('Errors or requirements not satisfied, cannot continue')
+        if count > 0:
+            raise ErrorWithDescription('Errors encountered or requirement not satisfied, cannot continue')
 
         if self.verbosity > 1:
             print
