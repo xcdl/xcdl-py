@@ -371,6 +371,10 @@ class Node(object):
         
         return None
 
+    def getChildrenHeaderFile(self):
+        
+        return None
+
     # -------------------------------------------------------------------------
 
     def wasProcessed(self):
@@ -734,6 +738,11 @@ class ActiveNode(Node):
             return self._headerFile
         
         if self._treeParent != None:
+            
+            headerFile = self._treeParent.getChildrenHeaderFile()
+            if headerFile != None:
+                return headerFile
+            
             return self._treeParent.getHeaderFileRecursive()
         
         return None

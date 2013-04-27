@@ -32,12 +32,25 @@ class Component(ActiveNode):
             self._basePath = self._kwargs[key]
             del self._kwargs[key]
 
+        key = 'childrenHeaderFile'
+        self._childrenHeaderFile = None
+        if key in self._kwargs:
+            self._childrenHeaderFile = self._kwargs[key]
+            del self._kwargs[key]
+
+
         return
     
+
 
     def getChildrenList(self):
         
         return self._childrenList
+
+
+    def getChildrenHeaderFile(self):
+        
+        return self._childrenHeaderFile
     
 
     # -------------------------------------------------------------------------    
