@@ -1457,7 +1457,7 @@ class CommonApplication(object):
         
         cppList = self.groupSourceFilesByType(sources, ['.cpp'])
         cList = self.groupSourceFilesByType(sources, ['.c'])
-        sList = self.groupSourceFilesByType(sources, ['.S'])
+        sList = self.groupSourceFilesByType(sources, ['.S', '.s'])
                 
         allList = []
         allList.extend(cppList)
@@ -1750,6 +1750,8 @@ class CommonApplication(object):
         f.write('-include makefile_init.mk\n')        
         f.write('\n')
         f.write('-RM := {0} -rf\n'.format('rm'))        
+        f.write('\n')
+        f.write('TARGET_NAME := {0}\n'.format(artefactName))        
         f.write('\n')
 
         f.write('# The default target\n')
