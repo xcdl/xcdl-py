@@ -538,6 +538,9 @@ class CommonApplication(object):
             # store current configuration in the global dictionary    
             CommonApplication.insertConfigurationByName(node)
 
+        if node.getObjectType() == 'Repository':
+            node.setRepositoryFolderAbsolutePath(packageLocation.getFolderAbsolutePath())
+            
         # check copyFiles 
         copyFilesList = node.getCopyFilesList()
         if copyFilesList != None:
@@ -548,9 +551,7 @@ class CommonApplication(object):
                 else:
                     raise ErrorWithDescription('Destination missing in \'{0}\', node \'{1}\''.format(copyFile, node.getName()))
                 
-                (scriptAbsoluteFolderPath, _) = os.path.split(node.getScriptAbsolutePath())
-                srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
-                                                   srcConfigFileName)
+                srcAbsoluteFileName = self.computeRepositoryFilePath(node, srcConfigFileName)
                 
                 if not os.path.isfile(srcAbsoluteFileName):
                     raise ErrorWithDescription('copy source {0} not a file in node \'{1}\''.format(srcConfigFileName, node.getName()))
@@ -594,7 +595,24 @@ class CommonApplication(object):
         
         return
     
-    
+
+    # when filenames start with '/', they are not file system absolute,
+    # but relative to the node repository.
+    def computeRepositoryFilePath(self, node, fileName):
+
+        if os.path.isabs(fileName):
+            repositoryAbsoluteFolderPath = node.getRepositoryFolderAbsolutePath()
+            # remove the leading separator
+            relativeFileName = os.sep.join(fileName.split(os.sep)[1:])
+            absoluteFileName = os.path.join(repositoryAbsoluteFolderPath, 
+                                               relativeFileName)
+        else:                   
+            (scriptAbsoluteFolderPath, _) = os.path.split(node.getScriptAbsolutePath())
+            absoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
+                                           fileName)
+            
+        return absoluteFileName
+          
     def dumpTree(self, repositoriesList, isLoaded):
         
         if not isLoaded:
@@ -1374,11 +1392,8 @@ class CommonApplication(object):
             for copyFile in copyFilesList:
                 srcConfigFileName = copyFile[0].strip()
                 dstConfigFileName = copyFile[1].strip()
-                                        
-                (scriptAbsoluteFolderPath, _) = os.path.split(
-                                    node.getScriptAbsolutePath())
-                srcAbsoluteFileName = os.path.join(scriptAbsoluteFolderPath, 
-                                                   srcConfigFileName)
+                
+                srcAbsoluteFileName = self.computeRepositoryFilePath(node, srcConfigFileName)
 
                 dstAbsoluteFilePath = os.path.abspath(os.path.join(
                             outputFolder, outputSubFolder, dstConfigFileName))
