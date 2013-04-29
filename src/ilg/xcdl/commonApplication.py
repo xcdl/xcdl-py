@@ -259,9 +259,7 @@ class CommonApplication(object):
         for node in rootList:
             if node.getObjectType() != 'Repository':
                 raise ErrorWithDescription("Path does not contain a repository")
-            
-        for node in rootList:
-            node.setRepositoryFolderAbsolutePath(packageAbsolutePath)
+
             if self.verbosity > 0:
                 print '- {0} \'{1}\' parsed in'.format(node.getObjectType().lower(), node.getName())
                         
