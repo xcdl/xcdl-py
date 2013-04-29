@@ -392,6 +392,12 @@ class Node(object):
         
         return self._copyFilesList
     
+
+    # -------------------------------------------------------------------------
+    def getRepositoryFolderAbsolutePath(self):
+        
+        # the Repository node will terminate the recursion
+        return self._treeParent.getRepositoryFolderAbsolutePath()
             
     # ???
     # -------------------------------------------------------------------------
