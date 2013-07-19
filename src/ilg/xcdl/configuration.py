@@ -51,6 +51,12 @@ class Configuration(Node):
             self._artefactExtension = self._kwargs[key]
             del self._kwargs[key]
 
+        key = 'artefactDescription'
+        self._artefactDescription = None
+        if key in self._kwargs:
+            self._artefactDescription = self._kwargs[key]
+            del self._kwargs[key]
+
         key = 'toolchain'
         self._toolchainId = None
         if key in self._kwargs:
