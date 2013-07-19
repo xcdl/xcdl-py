@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from ilg.xcdl.errorWithDescription import ErrorWithDescription
+#from ilg.xcdl.commonApplication import evaluateExpression
 import ilg.xcdl.commonApplication
 
 class Node(object):
@@ -629,6 +630,31 @@ class ActiveNode(Node):
         # otherwise active objects have a value of 1/True
         return 1
 
+    def getValueIfAny(self):
+
+        if not self.isActive():
+            return None
+        
+        if self._computedExpression == None and self._value == None and self._defaultValueExpression == None:
+            return None
+
+        valueType = self.getValueTypeWithDefault()
+        if valueType != 'none':
+
+            
+            # give priority to computed expressions
+            if self._computedExpression != None:
+                return ilg.xcdl.commonApplication.evaluateExpression(self._computedExpression, self)
+    
+            if self._value != None:
+                return ilg.xcdl.commonApplication.evaluateExpression(self._value, self)
+    
+            if self._defaultValueExpression != None:
+                return ilg.xcdl.commonApplication.evaluateExpression(self._defaultValueExpression, self)
+    
+        # otherwise active objects have a value of 1/True
+        return None
+
 
     # return the object's value according to the valueType
     def getValueWithType(self):
@@ -649,6 +675,31 @@ class ActiveNode(Node):
         else:
             return value
 
+    def getValueIfAnyWithType(self):
+        
+        valueType = self.getValueTypeWithDefault()
+        
+        if valueType == 'none':
+            # non typed options should always be generated
+            return self.getValue()
+        
+        # typed option are generated only if they have content
+        value = self.getValueIfAny()
+        if value == None:
+            return None
+        
+        valueString = str(value)
+
+        if valueType == 'bool':
+            return (True if (valueString == '1' or valueString == 'True') else False)
+        elif valueType == 'string':
+            return valueString
+        elif valueType == 'int':
+            return int(valueString)
+        elif valueType == 'float':
+            return float(valueString)
+        else:
+            return value
 
     def setValueWithCount(self, value):
         
@@ -697,7 +748,8 @@ class ActiveNode(Node):
                 except:
                     try:
                         evaluatedValue = int(expression)
-                    except:
+                    except Exception as err:
+                        print str(err)
                         print 'ERROR: string expression \'{0}\' not integer, in node \'{1}\' (use 0)'.format(expression, self._id)
                         evaluatedValue = 0
             else:
@@ -768,7 +820,10 @@ class ActiveNode(Node):
         if not self.isActive():
             return None
         
-        formattedValue = self.getFormattedValue()
+        formattedValue = self.getFormattedValueIfAny()
+        if formattedValue == None:
+            return None
+        
         headerLine = '#define    {0}    {1}'.format(headerDefinition, formattedValue)
 
         headerFile = self.getHeaderFileRecursive()
@@ -835,6 +890,19 @@ class ActiveNode(Node):
         
         formatString = self.getValueFormatWithDefault()
         valueWithType = self.getValueWithType()
+        #valueWithType = self.getValueAsString()
+        if isinstance(valueWithType, bool):
+            valueWithType = str(valueWithType).lower()
+        
+        return formatString.format(valueWithType)
+
+    def getFormattedValueIfAny(self):
+        
+        formatString = self.getValueFormatWithDefault()
+        valueWithType = self.getValueIfAnyWithType()
+        if valueWithType == None:
+            return None
+        
         #valueWithType = self.getValueAsString()
         if isinstance(valueWithType, bool):
             valueWithType = str(valueWithType).lower()
