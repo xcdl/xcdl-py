@@ -2158,5 +2158,66 @@ def implementationsOf(sid):
     return nodeValue
 
 
+def evaluateExpression(expression, node):
 
-
+    if isinstance(expression, basestring):
+        expression = expression.strip()
+    
+    evaluatedValue = None
+    valueType = node.getValueTypeWithDefault()
+    if valueType == 'none':    
+        return None
+    elif valueType == 'string':
+        if isinstance(expression, basestring):
+            try:
+                evaluatedValue = eval(expression)
+            except:
+                evaluatedValue = expression
+        else:
+            evaluatedValue = str(expression)
+    elif valueType == 'bool':
+        if isinstance(expression, basestring):
+            try:
+                evaluatedValue = eval(expression)
+            except:
+                evaluatedValue = True if (expression.lower() == 'true') else False
+        else:
+            evaluatedValue = True if expression else False
+    elif valueType == 'int':
+        if isinstance(expression, basestring):
+            try:
+                evaluatedValue = int(eval(expression))
+            except:
+                try:
+                    evaluatedValue = int(expression)
+                except Exception as err:
+                    print str(err)
+                    print 'ERROR: string expression \'{0}\' not integer, in node \'{1}\' (use 0)'.format(expression, node._id)
+                    evaluatedValue = 0
+        else:
+            try:
+                evaluatedValue = int(expression)
+            except:
+                print 'ERROR: expression \'{0}\' not integer, in node \'{1}\' (use 0)'.format(expression, node._id)
+                evaluatedValue = 0
+                
+    elif valueType == 'float':
+        if isinstance(expression, basestring):
+            try:
+                evaluatedValue = float(eval(expression))
+            except:
+                try:
+                    evaluatedValue = float(expression)
+                except:
+                    print 'ERROR: string expression \'{0}\' not float, in node \'{1}\' (use 0)'.format(expression, node._id)
+                    evaluatedValue = 0.0                        
+        else:
+            try:
+                evaluatedValue = float(expression)
+            except:
+                print 'ERROR: expression \'{0}\' not float, in node \'{1}\' (use 0)'.format(expression, node._id)
+                evaluatedValue = 0
+    
+    return evaluatedValue 
+    
+    
