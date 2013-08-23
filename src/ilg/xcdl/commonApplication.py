@@ -843,19 +843,19 @@ class CommonApplication(object):
         loadList = configNode.getLoadPackagesList()
         if loadList != None:
             for load in loadList:
-                updated += self.loadPackageTreeNode(load, depth + 1)
+                updated += self.loadPackageTreeNode(load, depth + 1, configNode)
         
         treeParent = configNode.getTreeParent()
         if treeParent != None:
             if treeParent.getObjectType() != 'Configuration':
-                updated += self.loadPackageTreeNode(treeParent.getId(), depth + 1)
+                updated += self.loadPackageTreeNode(treeParent.getId(), depth + 1, configNode)
             else:
                 updated += self.loadConfigNode(treeParent, depth + 1)
                
         return updated
     
                 
-    def loadPackageTreeNode(self, treeNodeId, depth):
+    def loadPackageTreeNode(self, treeNodeId, depth, askedByNode):
 
         if  not  CommonApplication.isObjectById(treeNodeId):
             raise ErrorWithDescription('Missing node to load {0}'.format(treeNodeId))
@@ -873,7 +873,8 @@ class CommonApplication(object):
             return updated
         
         if self.verbosity == 1:
-            print '- package \'{0}\' and parents loaded'.format(treePackageNode.getName())
+            print '- package \'{0}\' and parents loaded (for \'{1}\')'.format(
+                    treePackageNode.getName(), askedByNode.getName())
         elif self.verbosity > 1:
             print '{0}load {1}'.format(indent * depth, treeNodeId)
             
@@ -882,7 +883,7 @@ class CommonApplication(object):
         loadPackagesList = treePackageNode.getLoadPackagesList()
         if loadPackagesList != None:
             for loadPackages in loadPackagesList:
-                updated += self.loadPackageTreeNode(loadPackages, depth + 1)
+                updated += self.loadPackageTreeNode(loadPackages, depth + 1, treePackageNode)
                         
         return updated
     
