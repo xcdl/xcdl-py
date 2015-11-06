@@ -1,6 +1,6 @@
-# Welcome to the XCDL.py Project!
+# xcdl-py
 
-This was the initial Python implementation of [XCDL](https://github.com/xcdl).
+This was the initial Python implementation of the [XCDL](https://github.com/xcdl) command line utility.
 
 The implementation was experimental, as a proof of concept. The metadata files were in fact fragments of Python code, loaded at trun time.
 
